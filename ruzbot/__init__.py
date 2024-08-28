@@ -1,0 +1,1 @@
+from .ruzbot import bot
