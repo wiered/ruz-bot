@@ -195,8 +195,3 @@ class RuzParser:
             return "Пр. зан."
         
         return kindOfWork
-    
-        
-# parser = RuzParser()
-# parser.parseDate("2024.09.03")
-# parser.printLessions()

@@ -11,7 +11,7 @@ from db import load_from_csv, write_to_csv
 from ruzparser import RuzParser
 from utils import RANDOM_GROUP_NAMES, Users
 
-BOT_TOKEN = os.environ.get('TEST_BOT_TOKEN')
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 bot = AsyncTeleBot(BOT_TOKEN)
 parser = RuzParser()
