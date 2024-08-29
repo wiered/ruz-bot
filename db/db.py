@@ -14,9 +14,20 @@ def load_from_csv(file_name):
     :param file_name: The name of the CSV file to load
     :return: A list of dictionaries, each containing a user's data
     """
-    with open(file_name, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        return list(reader)
+    # show current path of an app
+    import os
+    print(os.getcwd())
+    
+    try:
+        with open(file_name, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            return list(reader)
+    except FileNotFoundError:
+        logging.error('File not found')
+        # Run echo command to create empy file
+        open(file_name, 'w').close()
+        logging.info('File created')
+        load_from_csv(file_name)
 
 def write_to_csv(file_name, data):
     """

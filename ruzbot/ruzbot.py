@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import random
 import re
@@ -22,7 +24,7 @@ def load_users() -> None:
     """
     Loads users from the CSV file and adds them to the users dictionary.
     """
-    for user in load_from_csv("./db/db.csv"):
+    for user in load_from_csv("/db/db.csv"):
         # Get the user's id, group id and group name from the CSV file
         user_id = int(user.get("id"))
         group_id = int(user.get("group_id"))
@@ -30,7 +32,6 @@ def load_users() -> None:
 
         # Add the user to the users dictionary
         users.addUser(user_id, group_id, group_name)
-
 
 async def setGroup(callback, group_id, group_name) -> str:
     """
@@ -59,9 +60,9 @@ async def setGroup(callback, group_id, group_name) -> str:
         ))
     
     # Convert the users dictionary to a list of dictionaries
-    users_json = users.getUsersJson()
+    # users_json = users.getUsersJson()
     # Write the list of dictionaries to the CSV file
-    write_to_csv("./db/db.csv", users_json)
+    # write_to_csv("/db/db.csv", users_json)
     
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
@@ -152,7 +153,6 @@ async def callbackFilter(call) -> bool:
         bool: Always True
     """
     return True
-
 
 async def dateCommand(message, _timedelta):
     """
@@ -318,6 +318,57 @@ async def startCommand(message):
     # Reply to the message with the main menu
     await bot.reply_to(message, """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?
 Учитывайте что бот в бете.""", reply_markup = markup)
+
+@bot.message_handler(commands=['getdb'])
+async def getDB(message):
+    """
+    Handler for the /getdb command. It sends a JSON dump of all users in the database to the user.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    logging.info('/getdb command runned by: {}, {}'.format(
+        message.from_user.id, type(message.from_user.id)
+        ))
+    # Only allow the admin to run this command
+    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
+        return
+    
+    # Get all users from the database
+    reply_message = json.dumps(users.getAllUsers(), ensure_ascii=False)
+    
+    # Send the JSON dump of users to the user
+    await bot.reply_to(message, reply_message)
+
+@bot.message_handler(commands=['setdb'])
+async def setDB(message):
+    """
+    Handler for the /setdb command. It sets the database to the given path and saves it to the environment.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    logging.info('/setdb command runned by: {}, {}'.format(
+        message.from_user.id, type(message.from_user.id)
+        ))
+    # Only allow the admin to run this command
+    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
+        return
+    
+    # Get the new database path from the message
+    db = json.loads(message.text, ensure_ascii=False)
+    # Set the new database path
+    users.setDB(db)
+    # Reply to the user with a success message
+    reply_message = 'База данных успешно обновлена'
+    
+    await bot.reply_to(message, reply_message)
 
 load_users()
 print(users.getAllUsers())

@@ -14,6 +14,13 @@ git clone https://github.com/wiered/ruz-bot.git
 cd ruz-bot
 ```
 
+5. Create .env and add BOT_TOKEN and ADMIN_ID
+The file should look like this
+```.env
+BOT_TOKEN=your-bot-token-here
+ADMIN_ID=your-id
+```
+
 3. Build Docker image
 ```bash
 docker build -t ruz-bot .
