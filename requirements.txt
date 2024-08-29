@@ -5,9 +5,11 @@ async-timeout==4.0.3
 attrs==24.2.0
 certifi==2024.7.4
 charset-normalizer==3.3.2
+dnspython==2.6.1
 frozenlist==1.4.1
 idna==3.8
 multidict==6.0.5
+pymongo==4.8.0
 pyTelegramBotAPI==4.22.1
 regex==2024.7.24
 requests==2.32.3
