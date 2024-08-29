@@ -1,14 +1,5 @@
-FROM alpine as builder
-RUN echo "id,group_id,group_name" > /tmp/db.csv
-
-FROM your-base-image
-COPY --from=builder /tmp/db.csv /db/db.csv
-
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3-slim
-
-# Set port to 5000
-EXPOSE 5000
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
