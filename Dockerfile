@@ -23,7 +23,9 @@ RUN echo "id,group_id,group_name" > /tmp/db.csv
 
 # Copying db.csv
 FROM ruz-bot
-COPY --from=builder /tmp/db.csv /db/db.csv
+COPY /tmp/db.csv /db/db.csv
+
+FROM python:3-slim
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
