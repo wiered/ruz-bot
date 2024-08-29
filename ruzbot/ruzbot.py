@@ -58,7 +58,7 @@ async def setGroup(callback, group_id, group_name) -> str:
         ))
     
     # Convert the users dictionary to a list of dictionaries
-    users_json = users.getUsersJson()
+    # users_json = users.getUsersJson()
     # Write the list of dictionaries to the CSV file
     # write_to_csv("/db/db.csv", users_json)
     
@@ -318,5 +318,14 @@ async def startCommand(message):
     await bot.reply_to(message, """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?
 Учитывайте что бот в бете.""", reply_markup = markup)
 
+@bot.message_handler(commands=['getdb'])
+async def getDB(message):
+    if message.message.from_user.id != 547334624:
+        return
+    
+    reply_message = users.getUsersJson()
+    
+    await bot.reply_to(message, reply_message)
+    
 load_users()
 print(users.getAllUsers())
