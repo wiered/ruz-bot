@@ -60,7 +60,7 @@ async def setGroup(callback, group_id, group_name) -> str:
     # Convert the users dictionary to a list of dictionaries
     users_json = users.getUsersJson()
     # Write the list of dictionaries to the CSV file
-    write_to_csv("/db/db.csv", users_json)
+    # write_to_csv("/db/db.csv", users_json)
     
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
