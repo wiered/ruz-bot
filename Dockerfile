@@ -1,3 +1,9 @@
+FROM alpine as builder
+RUN echo "id,group_id,group_name" > /tmp/db.csv
+
+FROM your-base-image
+COPY --from=builder /tmp/db.csv /app/db/db.csv
+
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3-slim
 
@@ -16,12 +22,6 @@ RUN python -m pip install -r requirements.txt
 
 WORKDIR /app
 COPY . /app
-
-# Generating db.csv
-RUN echo "id,group_id,group_name" > ~/tmp/db.csv
-
-# Copying db.csv
-COPY ~/tmp/db.csv /db/db.csv
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
