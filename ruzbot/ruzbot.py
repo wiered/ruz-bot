@@ -320,7 +320,7 @@ async def startCommand(message):
 
 @bot.message_handler(commands=['getdb'])
 async def getDB(message):
-    if message.message.from_user.id != 547334624:
+    if message.message.from_user.id != int(os.environ.get('ADMIN_ID')):
         return
     
     reply_message = users.getUsersJson()
