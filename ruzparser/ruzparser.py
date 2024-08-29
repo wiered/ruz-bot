@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+import logging
 
 import aiohttp
 import requests
@@ -23,6 +24,9 @@ week_days = {
     6: "Воскресенье"
 }
 
+GROUP_URL = "https://ruz.mstuca.ru/api/search?term={}&type=group"
+LESSIONS_URL = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
+
 class RuzParser:
     """
     Class for parsing schedule from MSTUCA
@@ -31,8 +35,24 @@ class RuzParser:
         """
         Init class
         """
-        self.group_url = "https://ruz.mstuca.ru/api/search?term={}&type=group"
-        self.lessions_url = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
+        pass
+    
+    async def fetch(self, client: aiohttp.ClientSession, url: str) -> dict:
+        """
+        Fetches JSON data from the given URL.
+        
+        Args:
+            client: The aiohttp client session.
+            url: The URL to fetch.
+        
+        Returns:
+            The JSON data as a dictionary.
+        """
+        async with client.get(url) as resp:
+            # Check if the request was successful
+            assert resp.status == 200
+            # Get the JSON data from the response
+            return await resp.json(encoding="Windows-1251")
     
     async def parse(self, group, start_date, end_date):
         """
@@ -46,15 +66,11 @@ class RuzParser:
         Returns:
             dict: Schedule in JSON format
         """
-        print(f"Running parse for {group} from {start_date} to {end_date}")
+        logging.info(f"Running parse for {group} from {start_date} to {end_date}")
         async with aiohttp.ClientSession() as session:
-            r = await session.get(self.lessions_url.format(group, start_date, end_date))
-            if r.status != 200:
-                return {}
-            r.encoding = "Windows-1251"
-            print(f"Status code: {r.status}")
+            json = await self.fetch(session, LESSIONS_URL.format(group, start_date, end_date))
         
-        return await r.json()
+        return json
 
     
     async def parseDay(self, group, _timedelta = 0):
@@ -89,7 +105,7 @@ class RuzParser:
         Returns:
             dict: Schedule in JSON format
         """
-        print(f'parseWeek: {group} {_timedelta}')
+        logging.info(f'parseWeek: {group} {_timedelta}')
         
         date = datetime.today() + timedelta(days = _timedelta * 7)
         start = date - timedelta(days=date.weekday())
@@ -98,10 +114,10 @@ class RuzParser:
         start = start.strftime('%Y.%m.%d')
         end = end.strftime('%Y.%m.%d')
         
-        print(f'parseWeek: {start} {end}')
+        logging.info(f'parseWeek: {start} {end}')
         return await self.parse(group, start, end)
             
-    def getLessions(self, data, _timedelta = 0):
+    def formatDay(self, data, _timedelta = 0):
         """
         Format schedule for group for one day
         
@@ -128,7 +144,7 @@ class RuzParser:
         
         return f"= {week_day} ({date}) = \n{lessions}"
     
-    def getLessionsFromWeek(self, data):
+    def formatWeek(self, data):
         """
         Format schedule for group for one week
         
@@ -179,10 +195,9 @@ class RuzParser:
         Search group in MSTUCA
         """
         async with aiohttp.ClientSession() as session:
-            r = await session.get(self.group_url.format(group_name))
-            r.encoding = "Windows-1251"
+            json = await self.fetch(session, GROUP_URL.format(group_name))
         
-        return await r.json()
+        return json
     
     @staticmethod
     def parseKindOfWork(kindOfWork):

@@ -5,11 +5,11 @@ import random
 import re
 
 import telebot
+from pymongo import MongoClient
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 from telebot.util import quick_markup
 
-from db import load_from_csv, write_to_csv
 from ruzparser import RuzParser
 from utils import RANDOM_GROUP_NAMES, Users
 
@@ -18,20 +18,14 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = AsyncTeleBot(BOT_TOKEN)
 parser = RuzParser()
 
-users = Users()
+client = MongoClient(os.environ.get('MONGODB_ADRESS'), connect=True)
+db = client.ruzbotdb
+users = db.users
 
-def load_users() -> None:
-    """
-    Loads users from the CSV file and adds them to the users dictionary.
-    """
-    for user in load_from_csv("/db/db.csv"):
-        # Get the user's id, group id and group name from the CSV file
-        user_id = int(user.get("id"))
-        group_id = int(user.get("group_id"))
-        group_name = user.get("group_name")
-
-        # Add the user to the users dictionary
-        users.addUser(user_id, group_id, group_name)
+def isUserKnown(user_id):
+    if users.find_one({"id":user_id}):
+        return True
+    return False
 
 async def setGroup(callback, group_id, group_name) -> str:
     """
@@ -45,25 +39,23 @@ async def setGroup(callback, group_id, group_name) -> str:
     Returns:
         str: A message confirming that the group has been set.
     """
-    print("Saving")
+    
     # Get the user's id from the callback query
     user_id = callback.message.reply_to_message.from_user.id
-    # Add the user to the users dictionary with the given group id and name
-    users.addUser(user_id, group_id, group_name)
-    # Get the user from the users dictionary
-    user = users.getUser(user_id)
-
-    print("New user: {}: {} - {}".format(
-        user_id, 
-        user.get("group_id"),
-        user.get("group_name"),
-        ))
     
-    # Convert the users dictionary to a list of dictionaries
-    # users_json = users.getUsersJson()
-    # Write the list of dictionaries to the CSV file
-    # write_to_csv("/db/db.csv", users_json)
-    
+    # If the user is not already in the database, add them
+    if not isUserKnown(user_id):
+        logging.info("Adding user into database: {} - {}".format(user_id, group_name))
+        users.insert_one({
+            "id": user_id,
+            "group_id": group_id, 
+            "group_name": group_name
+        })
+    else:
+        logging.info("Updating user in database: {} - {}".format(user_id, group_name))
+        # Else update user in database
+        users.update_one({"id": user_id}, {"$set": {"group_id": group_id, "group_name": group_name}})
+        
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
 
@@ -123,7 +115,7 @@ async def buttonsCallback(callback):
         # If the callback query is not for any of the above handlers
         case _:
             # Print a message indicating that the callback query is not supported
-            print("Wrong comand")
+            logging.warn("Wrong comand")
 
 async def textCallback(callback):
     match tuple(i for i, pattern in enumerate([r"\W*\d*"]) if re.match(pattern, callback.text)):
@@ -140,7 +132,7 @@ async def textCallback(callback):
 
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
         case _:
-            print("Wrong case")
+            logging.warn("Wrong case")
      
 async def callbackFilter(call) -> bool:
     """
@@ -165,12 +157,17 @@ async def dateCommand(message, _timedelta):
     Returns:
         None
     """
+    
+    # convert _timedelta to int
     _timedelta = int(_timedelta)
-    print('Running date command {}'.format(_timedelta))
-    group_id = users.getUser(message.reply_to_message.from_user.id).get("group_id")
+    logging.info('Running date command {}'.format(_timedelta))
+    # get user id from message
+    user_id = message.reply_to_message.from_user.id
+    # get user's group id from database
+    group_id = users.find_one({"id":user_id}).get("group_id")
     data = await parser.parseDay(group_id, _timedelta)
     
-    reply_message = parser.getLessions(data, _timedelta)
+    reply_message = parser.formatDay(data, _timedelta)
     markup = quick_markup({
         "Пред. день": {'callback_data' : 'parseDay {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
@@ -191,14 +188,15 @@ async def weekCommand(message, _timedelta):
         None
     """
     _timedelta = int(_timedelta)
-    print('Running week command {}'.format(_timedelta))
-    # Get the user's group id from the users dictionary
-    group_id = users.getUser(message.reply_to_message.from_user.id).get("group_id")
+    logging.info('Running week command {}'.format(_timedelta))
+    user_id = message.reply_to_message.from_user.id
+    # Get the user's group id from database
+    group_id = users.find_one({"id":user_id}).get("group_id")
     # Parse the schedule for the specified week
     data = await parser.parseWeek(group_id, _timedelta)
     
     # Get the formatted schedule for the week
-    reply_message = parser.getLessionsFromWeek(data)
+    reply_message = parser.formatWeek(data)
     # Create a markup with buttons for the previous week, next week and going back to the start
     markup = quick_markup({
         "Пред. нед.": {'callback_data' : 'parseWeek {}'.format(_timedelta - 1)},
@@ -234,7 +232,12 @@ async def sendProfileCommand(message):
     Returns:
         None
     """
-    user = users.getUser(message.reply_to_message.from_user.id)
+    
+    # Get user id from message
+    user_id = message.reply_to_message.from_user.id
+    # Get user from database
+    user = users.find_one({"id": user_id})
+    # Get user's group id and name
     group_id = user.get("group_id")
     group_name = user.get("group_name")
 
@@ -260,6 +263,8 @@ async def backCommand(message, additional_message: str = ""):
     Returns:
         None
     """
+    
+    # Create a message with buttons to view the schedule for today, tomorrow, this week, next week, or to view the user's profile
     reply_message = additional_message + "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать? \nУчитывайте что бот в бете."
     markup = quick_markup({
         # Button to view the schedule for today
@@ -273,7 +278,12 @@ async def backCommand(message, additional_message: str = ""):
         # Button to view the user's profile
         "Профиль": {'callback_data' : 'showProfile'},
     }, row_width=3)
-    if not users.isUserKnown(message.reply_to_message.from_user.id):
+    
+    # Get user id from mesage
+    user_id = message.reply_to_message.from_user.id
+    
+    # Check if user not in the database
+    if not isUserKnown(user_id):
         # If the user is not in the database, show the "Set group" button
         markup = quick_markup({
             "Установить группу": {'callback_data' : 'group'},
@@ -308,7 +318,7 @@ async def startCommand(message):
     }, row_width=3)
     
     # If the user is not in the database, show the "Set group" button
-    if not users.isUserKnown(message.from_user.id):
+    if not isUserKnown(message.from_user.id):
         markup = quick_markup({
             "Установить группу": {'callback_data' : 'configureGroup'},
         }, row_width=1)
@@ -319,56 +329,4 @@ async def startCommand(message):
     await bot.reply_to(message, """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?
 Учитывайте что бот в бете.""", reply_markup = markup)
 
-@bot.message_handler(commands=['getdb'])
-async def getDB(message):
-    """
-    Handler for the /getdb command. It sends a JSON dump of all users in the database to the user.
-
-    Args:
-        message (Message): The message object
-
-    Returns:
-        None
-    """
-    logging.info('/getdb command runned by: {}, {}'.format(
-        message.from_user.id, type(message.from_user.id)
-        ))
-    # Only allow the admin to run this command
-    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
-        return
-    
-    # Get all users from the database
-    reply_message = json.dumps(users.getAllUsers(), ensure_ascii=False)
-    
-    # Send the JSON dump of users to the user
-    await bot.reply_to(message, reply_message)
-
-@bot.message_handler(commands=['setdb'])
-async def setDB(message):
-    """
-    Handler for the /setdb command. It sets the database to the given path and saves it to the environment.
-
-    Args:
-        message (Message): The message object
-
-    Returns:
-        None
-    """
-    logging.info('/setdb command runned by: {}, {}'.format(
-        message.from_user.id, type(message.from_user.id)
-        ))
-    # Only allow the admin to run this command
-    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
-        return
-    
-    # Get the new database path from the message
-    db = json.loads(message.text, ensure_ascii=False)
-    # Set the new database path
-    users.setDB(db)
-    # Reply to the user with a success message
-    reply_message = 'База данных успешно обновлена'
-    
-    await bot.reply_to(message, reply_message)
-
-load_users()
-print(users.getAllUsers())
+print(list(users.find()))
