@@ -23,6 +23,7 @@ def load_from_csv(file_name):
         # Run echo command to create empy file
         open(file_name, 'w').close()
         logging.info('File created')
+        load_from_csv(file_name)
 
 def write_to_csv(file_name, data):
     """
