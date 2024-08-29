@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 
+import aiohttp
 import requests
 
 lession_number = {
@@ -33,7 +34,7 @@ class RuzParser:
         self.group_url = "https://ruz.mstuca.ru/api/search?term={}&type=group"
         self.lessions_url = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
     
-    def parse(self, group, start_date, end_date):
+    async def parse(self, group, start_date, end_date):
         """
         Parse schedule for group from start_date to end_date
         
@@ -45,11 +46,18 @@ class RuzParser:
         Returns:
             dict: Schedule in JSON format
         """
-        r = requests.get(self.lessions_url.format(group, start_date, end_date))
-        r.encoding = "Windows-1251"
-        return r.json()
+        print(f"Running parse for {group} from {start_date} to {end_date}")
+        async with aiohttp.ClientSession() as session:
+            r = await session.get(self.lessions_url.format(group, start_date, end_date))
+            if r.status != 200:
+                return {}
+            r.encoding = "Windows-1251"
+            print(f"Status code: {r.status}")
+        
+        return await r.json()
+
     
-    def parseDay(self, group, _timedelta = 0):
+    async def parseDay(self, group, _timedelta = 0):
         """
         Parse schedule for group for one day
         
@@ -68,9 +76,9 @@ class RuzParser:
             
         date = datetime.today() + (timedelta(days=_timedelta) * coof)
         date = date.strftime('%Y.%m.%d')
-        return self.parse(group, date, date)
+        return await self.parse(group, date, date)
     
-    def parseWeek(self, group, _timedelta: int = 0):
+    async def parseWeek(self, group, _timedelta: int = 0):
         """
         Parse schedule for group for one week
         
@@ -81,6 +89,8 @@ class RuzParser:
         Returns:
             dict: Schedule in JSON format
         """
+        print(f'parseWeek: {group} {_timedelta}')
+        
         date = datetime.today() + timedelta(days = _timedelta * 7)
         start = date - timedelta(days=date.weekday())
         end = start + timedelta(days=6)
@@ -88,7 +98,8 @@ class RuzParser:
         start = start.strftime('%Y.%m.%d')
         end = end.strftime('%Y.%m.%d')
         
-        return self.parse(group, start, end)
+        print(f'parseWeek: {start} {end}')
+        return await self.parse(group, start, end)
             
     def getLessions(self, data, _timedelta = 0):
         """
@@ -163,14 +174,15 @@ class RuzParser:
         
         return lessions
     
-    def search_group(self, group_name):
+    async def search_group(self, group_name):
         """
         Search group in MSTUCA
         """
-        r = requests.get(self.group_url.format(group_name))
-        r.encoding = "Windows-1251"
+        async with aiohttp.ClientSession() as session:
+            r = await session.get(self.group_url.format(group_name))
+            r.encoding = "Windows-1251"
         
-        return r.json()
+        return await r.json()
     
     @staticmethod
     def parseKindOfWork(kindOfWork):
@@ -183,8 +195,3 @@ class RuzParser:
             return "Пр. зан."
         
         return kindOfWork
-    
-        
-# parser = RuzParser()
-# parser.parseDate("2024.09.03")
-# parser.printLessions()

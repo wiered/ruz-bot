@@ -128,7 +128,7 @@ async def textCallback(callback):
     match tuple(i for i, pattern in enumerate([r"\W*\d*"]) if re.match(pattern, callback.text)):
         case (0,):
             group_name = callback.text
-            groups_list = parser.search_group(group_name)
+            groups_list = await parser.search_group(group_name)
             if not groups_list:
                 await bot.reply_to(callback, f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {random.choice(RANDOM_GROUP_NAMES)}")
                 return
@@ -168,7 +168,7 @@ async def dateCommand(message, _timedelta):
     _timedelta = int(_timedelta)
     print('Running date command {}'.format(_timedelta))
     group_id = users.getUser(message.reply_to_message.from_user.id).get("group_id")
-    data = parser.parseDay(group_id, _timedelta)
+    data = await parser.parseDay(group_id, _timedelta)
     
     reply_message = parser.getLessions(data, _timedelta)
     markup = quick_markup({
@@ -195,7 +195,7 @@ async def weekCommand(message, _timedelta):
     # Get the user's group id from the users dictionary
     group_id = users.getUser(message.reply_to_message.from_user.id).get("group_id")
     # Parse the schedule for the specified week
-    data = parser.parseWeek(group_id, _timedelta)
+    data = await parser.parseWeek(group_id, _timedelta)
     
     # Get the formatted schedule for the week
     reply_message = parser.getLessionsFromWeek(data)
