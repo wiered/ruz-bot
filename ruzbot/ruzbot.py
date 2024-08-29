@@ -13,7 +13,7 @@ from db import load_from_csv, write_to_csv
 from ruzparser import RuzParser
 from utils import RANDOM_GROUP_NAMES, Users
 
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+BOT_TOKEN = os.environ.get('TEST_BOT_TOKEN')
 
 bot = AsyncTeleBot(BOT_TOKEN)
 parser = RuzParser()
@@ -153,7 +153,6 @@ async def callbackFilter(call) -> bool:
         bool: Always True
     """
     return True
-
 
 async def dateCommand(message, _timedelta):
     """
@@ -332,14 +331,14 @@ async def getDB(message):
         None
     """
     logging.info('/getdb command runned by: {}, {}'.format(
-        message.message.from_user.id, type(message.message.from_user.id)
+        message.from_user.id, type(message.from_user.id)
         ))
     # Only allow the admin to run this command
-    if message.message.from_user.id != int(os.environ.get('ADMIN_ID')):
+    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
         return
     
     # Get all users from the database
-    reply_message = json.dumps(users.getAllUsers())
+    reply_message = json.dumps(users.getAllUsers(), ensure_ascii=False)
     
     # Send the JSON dump of users to the user
     await bot.reply_to(message, reply_message)
@@ -356,14 +355,14 @@ async def setDB(message):
         None
     """
     logging.info('/setdb command runned by: {}, {}'.format(
-        message.message.from_user.id, type(message.message.from_user.id)
+        message.from_user.id, type(message.from_user.id)
         ))
     # Only allow the admin to run this command
-    if message.message.from_user.id != int(os.environ.get('ADMIN_ID')):
+    if message.from_user.id != int(os.environ.get('ADMIN_ID')):
         return
     
     # Get the new database path from the message
-    db = json.loads(message.text)
+    db = json.loads(message.text, ensure_ascii=False)
     # Set the new database path
     users.setDB(db)
     # Reply to the user with a success message
