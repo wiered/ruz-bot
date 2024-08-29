@@ -35,7 +35,6 @@ class Users():
             }
         })
         
-        
     def updateUser(self, _id, group_id, group_name):
         """
         Updates the user's data in the users_dict dictionary.
@@ -51,7 +50,6 @@ class Users():
                 "group_name": group_name
             }
         })
-        
             
     def getUser(self, _id):
         """
@@ -73,6 +71,16 @@ class Users():
             dict: The entire dictionary of all users.
         """
         return self.users_dict
+    
+    def setDB(self, db: dict) -> None:
+        """
+        Sets the dictionary of all users in the form of {user_id: {group_id, group_name}}.
+        
+        Args:
+            db (dict): The entire dictionary of all users.
+        """
+        self.users_dict = db
+
     
     def isUserKnown(self, _id) -> bool:
         """

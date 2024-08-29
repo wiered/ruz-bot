@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import random
 import re
@@ -320,12 +322,54 @@ async def startCommand(message):
 
 @bot.message_handler(commands=['getdb'])
 async def getDB(message):
+    """
+    Handler for the /getdb command. It sends a JSON dump of all users in the database to the user.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    logging.info('/getdb command runned by: {}, {}'.format(
+        message.message.from_user.id, type(message.message.from_user.id)
+        ))
+    # Only allow the admin to run this command
     if message.message.from_user.id != int(os.environ.get('ADMIN_ID')):
         return
     
-    reply_message = users.getUsersJson()
+    # Get all users from the database
+    reply_message = json.dumps(users.getAllUsers())
+    
+    # Send the JSON dump of users to the user
+    await bot.reply_to(message, reply_message)
+
+@bot.message_handler(commands=['setdb'])
+async def setDB(message):
+    """
+    Handler for the /setdb command. It sets the database to the given path and saves it to the environment.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    logging.info('/setdb command runned by: {}, {}'.format(
+        message.message.from_user.id, type(message.message.from_user.id)
+        ))
+    # Only allow the admin to run this command
+    if message.message.from_user.id != int(os.environ.get('ADMIN_ID')):
+        return
+    
+    # Get the new database path from the message
+    db = json.loads(message.text)
+    # Set the new database path
+    users.setDB(db)
+    # Reply to the user with a success message
+    reply_message = 'База данных успешно обновлена'
     
     await bot.reply_to(message, reply_message)
-    
+
 load_users()
 print(users.getAllUsers())
