@@ -22,7 +22,7 @@ def load_users() -> None:
     """
     Loads users from the CSV file and adds them to the users dictionary.
     """
-    for user in load_from_csv("./db/db.csv"):
+    for user in load_from_csv("/db/db.csv"):
         # Get the user's id, group id and group name from the CSV file
         user_id = int(user.get("id"))
         group_id = int(user.get("group_id"))
@@ -30,7 +30,6 @@ def load_users() -> None:
 
         # Add the user to the users dictionary
         users.addUser(user_id, group_id, group_name)
-
 
 async def setGroup(callback, group_id, group_name) -> str:
     """
@@ -61,7 +60,7 @@ async def setGroup(callback, group_id, group_name) -> str:
     # Convert the users dictionary to a list of dictionaries
     users_json = users.getUsersJson()
     # Write the list of dictionaries to the CSV file
-    write_to_csv("./db/db.csv", users_json)
+    write_to_csv("/db/db.csv", users_json)
     
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)

@@ -14,6 +14,10 @@ def load_from_csv(file_name):
     :param file_name: The name of the CSV file to load
     :return: A list of dictionaries, each containing a user's data
     """
+    # show current path of an app
+    import os
+    print(os.getcwd())
+    
     try:
         with open(file_name, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
