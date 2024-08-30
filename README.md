@@ -9,24 +9,28 @@ If you want to run this with docker:
 git clone https://github.com/wiered/ruz-bot.git
 ```
 
-4. Cd to ruz-bot folder
+2. Cd to ruz-bot folder
 ```bash
 cd ruz-bot
 ```
 
-5. Create .env and add BOT_TOKEN and ADMIN_ID
+3. Run your own MongoDB localy or host it somewhere
+Guide: https://www.mongodb.com/
+
+4. Create .env and add BOT_TOKEN, ADMIN_ID and MONGODB_ADRESS
 The file should look like this
 ```.env
 BOT_TOKEN=your-bot-token-here
 ADMIN_ID=your-id
+MONGODB_ADRESS=mongodb://ip:port
 ```
 
-3. Build Docker image
+5. Build Docker image
 ```bash
 docker build -t ruz-bot .
 ```
 
-4. Run Docker image
+6. Run Docker image
 ```bash
 docker run ruz-bot
 ```
