@@ -1,26 +1,19 @@
-import json
 import logging
 import os
 import random
 import re
 
-import telebot
-from pymongo import MongoClient
 from telebot.async_telebot import AsyncTeleBot
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 from telebot.util import quick_markup
 
 from ruzparser import RuzParser
-from utils import RANDOM_GROUP_NAMES, Users
+from utils import RANDOM_GROUP_NAMES, formatters
+from db import users
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 bot = AsyncTeleBot(BOT_TOKEN)
 parser = RuzParser()
-
-client = MongoClient(os.environ.get('MONGODB_ADRESS'), connect=True)
-db = client.ruzbotdb
-users = db.users
 
 def isUserKnown(user_id):
     if users.find_one({"id":user_id}):
@@ -175,7 +168,7 @@ async def dateCommand(message, _timedelta):
     group_id = users.find_one({"id":user_id}).get("group_id")
     data = await parser.parseDay(group_id, _timedelta)
     
-    reply_message = parser.formatDay(data, _timedelta)
+    reply_message = formatters.formatDay(data, _timedelta)
     markup = quick_markup({
         "Пред. день": {'callback_data' : 'parseDay {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
@@ -204,7 +197,7 @@ async def weekCommand(message, _timedelta):
     data = await parser.parseWeek(group_id, _timedelta)
     
     # Get the formatted schedule for the week
-    reply_message = parser.formatWeek(data)
+    reply_message = formatters.formatWeek(data)
     # Create a markup with buttons for the previous week, next week and going back to the start
     markup = quick_markup({
         "Пред. нед.": {'callback_data' : 'parseWeek {}'.format(_timedelta - 1)},
@@ -288,7 +281,7 @@ async def backCommand(message, additional_message: str = ""):
         "Следующая неделя": {'callback_data' : 'parseWeek 1'},
         # Button to view the user's profile
         "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=3)
+    }, row_width=2)
     
     # Get user id from mesage
     user_id = message.reply_to_message.from_user.id
@@ -326,7 +319,7 @@ async def startCommand(message):
         "Следующая неделя": {'callback_data' : 'parseWeek 1'},
         # Button to view the user's profile
         "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=3)
+    }, row_width=2)
     
     # If the user is not in the database, show the "Set group" button
     if not isUserKnown(message.from_user.id):
