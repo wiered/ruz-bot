@@ -15,10 +15,12 @@ cd ruz-bot
 ```
 
 3. Run your own MongoDB localy or host it somewhere
-Guide: https://www.mongodb.com/
+   
+    Guide: https://www.mongodb.com/
 
 4. Create .env and add BOT_TOKEN, ADMIN_ID and MONGODB_ADRESS
-The file should look like this
+
+    The file should look like this
 ```.env
 BOT_TOKEN=your-bot-token-here
 ADMIN_ID=your-id
