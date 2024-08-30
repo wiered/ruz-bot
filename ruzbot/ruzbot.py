@@ -98,6 +98,14 @@ async def buttonsCallback(callback):
         case ['showProfile']:
             # Call the send profile command with the callback query message
             await sendProfileCommand(callback.message)
+        
+        case ['setSubGroup', *args]:
+            additional_message = "Ваша подгруппа установлена: {}!\n\n".format(args[0])
+            await backCommand(callback.message, additional_message)
+        
+        case ['setSubGroupCommand', *args]:
+            # Call the send profile command with the callback query message
+            await setSubGroupCommand(callback.message, args[0])
 
         # If the callback query is for the set group button
         case ['setGroup', *args]:
@@ -207,6 +215,9 @@ async def weekCommand(message, _timedelta):
     # Edit the message with the new text and reply markup
     await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup, parse_mode = "MarkdownV2")
 
+async def setSubGroupCommand(message, num):
+    pass
+
 async def setGroupCommand(message):
     """
     Handler for the setGroupCommand callback query. It prompts the user to enter the name of their group.
@@ -246,7 +257,7 @@ async def sendProfileCommand(message):
     markup = quick_markup({
         "Установить группу": {'callback_data' : 'configureGroup'},
         "Назад": {'callback_data' : 'start'},
-        "GitHub": {'url' : 'https://github.com/wiered'},
+        "GitHub": {'url' : 'https://github.com/wiered/ruz-bot'},
     }, row_width=2)
     
     # Edit the message with the new text and reply markup
