@@ -5,7 +5,7 @@ import db
 import ruzparser
 from ruzbot import bot
 from daily_timer import timerPooling
-from app.ruzbot.handlers import register_handlers
+from ruzbot.handlers import register_handlers
 
 async def updateLessonsSchedulesChache() -> None:
     """
