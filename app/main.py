@@ -33,7 +33,7 @@ async def updateLessonsSchedulesChache() -> None:
         
         # Save the schedule to the database
         db.saveMonthLessonsToDB(group, lessons_for_group)
-        await asyncio.sleep(10)
+        await asyncio.sleep(20)
 
 async def startBot():
     await bot.polling()
