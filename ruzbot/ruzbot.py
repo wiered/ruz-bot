@@ -168,14 +168,14 @@ async def dateCommand(message, _timedelta):
     group_id = users.find_one({"id":user_id}).get("group_id")
     data = await parser.parseDay(group_id, _timedelta)
     
-    reply_message = formatters.formatDay(data, _timedelta)
+    reply_message = formatters.formatDayMessage(data, _timedelta)
     markup = quick_markup({
         "Пред. день": {'callback_data' : 'parseDay {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
         "След. день": {'callback_data' : 'parseDay {}'.format(_timedelta + 1)}
     }, row_width=3)
     
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup, parse_mode = 'MarkdownV2')
 
 async def weekCommand(message, _timedelta):
     """
@@ -197,7 +197,7 @@ async def weekCommand(message, _timedelta):
     data = await parser.parseWeek(group_id, _timedelta)
     
     # Get the formatted schedule for the week
-    reply_message = formatters.formatWeek(data)
+    reply_message = formatters.formatWeekMessage(data)
     # Create a markup with buttons for the previous week, next week and going back to the start
     markup = quick_markup({
         "Пред. нед.": {'callback_data' : 'parseWeek {}'.format(_timedelta - 1)},
