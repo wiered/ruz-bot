@@ -1,26 +1,21 @@
-import json
 import logging
 import os
 import random
 import re
+from datetime import datetime, timedelta
 
-import telebot
-from pymongo import MongoClient
 from telebot.async_telebot import AsyncTeleBot
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup
 from telebot.util import quick_markup
 
+import db
 from ruzparser import RuzParser
-from utils import RANDOM_GROUP_NAMES, Users
+from utils import formatters, getRandomGroup
+from db import users
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 bot = AsyncTeleBot(BOT_TOKEN)
 parser = RuzParser()
-
-client = MongoClient(os.environ.get('MONGODB_ADRESS'), connect=True)
-db = client.ruzbotdb
-users = db.users
 
 def isUserKnown(user_id):
     if users.find_one({"id":user_id}):
@@ -45,7 +40,9 @@ async def setGroup(callback, group_id, group_name) -> str:
     
     # If the user is not already in the database, add them
     if not isUserKnown(user_id):
-        logging.info("Adding user into database: {} - {}".format(user_id, group_name))
+        logging.info(
+            "Adding user into database: {} - {}".format(user_id, group_name)
+            )
         users.insert_one({
             "id": user_id,
             "group_id": group_id, 
@@ -54,7 +51,12 @@ async def setGroup(callback, group_id, group_name) -> str:
     else:
         logging.info("Updating user in database: {} - {}".format(user_id, group_name))
         # Else update user in database
-        users.update_one({"id": user_id}, {"$set": {"group_id": group_id, "group_name": group_name}})
+        users.update_one(
+                {"id": user_id}, 
+                {
+                    "$set": {"group_id": group_id, "group_name": group_name}
+                }
+            )
         
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
@@ -131,11 +133,17 @@ async def textCallback(callback):
             group_name = callback.text
             groups_list = await parser.search_group(group_name)
             if not groups_list:
-                await bot.reply_to(callback, f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {random.choice(RANDOM_GROUP_NAMES)}")
+                await bot.reply_to(
+                    callback, 
+                    f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {getRandomGroup()}"
+                    )
                 return
 
             markup = quick_markup({
-                group.get("label"): {"callback_data": f"setGroup {group.get('id')} {group.get('label')}"} for group in groups_list
+                group.get("label"): 
+                    {
+                        "callback_data": f"setGroup {group.get('id')} {group.get('label')}"
+                    } for group in groups_list
             }, row_width=1)
 
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
@@ -144,7 +152,8 @@ async def textCallback(callback):
      
 async def callbackFilter(call) -> bool:
     """
-    This function is a filter for the callback queries. It always returns True, meaning that all callback queries are allowed.
+    This function is a filter for the callback queries. 
+    It always returns True, meaning that all callback queries are allowed.
 
     Args:
         call (CallbackQuery): The callback query object
@@ -156,7 +165,8 @@ async def callbackFilter(call) -> bool:
 
 async def dateCommand(message, _timedelta):
     """
-    Handler for the dateCommand callback query. It parses the schedule for the specified date and sends it back to the user.
+    Handler for the dateCommand callback query. 
+    It parses the schedule for the specified date and sends it back to the user.
 
     Args:
         message (Message): The message object
@@ -167,26 +177,42 @@ async def dateCommand(message, _timedelta):
     """
     
     # convert _timedelta to int
-    _timedelta = int(_timedelta)
     logging.info('Running date command {}'.format(_timedelta))
     # get user id from message
     user_id = message.reply_to_message.from_user.id
     # get user's group id from database
     group_id = users.find_one({"id":user_id}).get("group_id")
-    data = await parser.parseDay(group_id, _timedelta)
     
-    reply_message = parser.formatDay(data, _timedelta)
+    # get date
+    _timedelta = int(_timedelta)
+    date = datetime.today() + timedelta(days=_timedelta)
+    
+    if db.isDayChached(group_id, date):
+        # get data from db
+        data = db.getDay(group_id, date)
+    else:
+        # parse the schedule for the specified date
+        data = await parser.parseDay(group_id, date)
+    
+    reply_message = formatters.formatDayMessage(data, _timedelta)
     markup = quick_markup({
         "Пред. день": {'callback_data' : 'parseDay {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
         "След. день": {'callback_data' : 'parseDay {}'.format(_timedelta + 1)}
     }, row_width=3)
     
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup, 
+        parse_mode = 'MarkdownV2'
+        )
 
 async def weekCommand(message, _timedelta):
     """
-    Handler for the weekCommand callback query. It parses the schedule for the specified week and sends it back to the user.
+    Handler for the weekCommand callback query. 
+    It parses the schedule for the specified week and sends it back to the user.
 
     Args:
         message (Message): The message object
@@ -195,17 +221,27 @@ async def weekCommand(message, _timedelta):
     Returns:
         None
     """
-    _timedelta = int(_timedelta)
     logging.info('Running week command {}'.format(_timedelta))
     user_id = message.reply_to_message.from_user.id
     # Get the user's group id from database
     group_id = users.find_one({"id":user_id}).get("group_id")
-    # Parse the schedule for the specified week
-    data = await parser.parseWeek(group_id, _timedelta)
+    
+    # get date
+    _timedelta = int(_timedelta)
+    date = datetime.today() + timedelta(weeks=_timedelta)
+    
+    # check if week is chached or not
+    if db.isWeekChached(group_id, date):
+        # if yes get data from db
+        data = db.getWeek(group_id, date)
+    else:
+        # if not, then parse it from site
+        data = await parser.parseWeek(group_id, date)
     
     # Get the formatted schedule for the week
-    reply_message = parser.formatWeek(data)
-    # Create a markup with buttons for the previous week, next week and going back to the start
+    reply_message = formatters.formatWeekMessage(data)
+    # Create a markup with buttons for the previous week, 
+    #   next week and going back to the start
     markup = quick_markup({
         "Пред. нед.": {'callback_data' : 'parseWeek {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
@@ -213,14 +249,21 @@ async def weekCommand(message, _timedelta):
     }, row_width=3)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup, parse_mode = "MarkdownV2")
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup, 
+        parse_mode = "MarkdownV2"
+        )
 
 async def setSubGroupCommand(message, num):
     pass
 
 async def setGroupCommand(message):
     """
-    Handler for the setGroupCommand callback query. It prompts the user to enter the name of their group.
+    Handler for the setGroupCommand callback query. 
+    It prompts the user to enter the name of their group.
 
     Args:
         message (Message): The message object
@@ -231,11 +274,16 @@ async def setGroupCommand(message):
     # Register the textCallback as a message handler
     bot.register_message_handler(callback = textCallback)
     # Reply to the message with a prompt to enter the group name
-    await bot.reply_to(message, "Введи имя группы полностью(например ИС221): ")
+    await bot.reply_to(
+        message, 
+        "Введи имя группы полностью(например ИС221): "
+        )
 
 async def sendProfileCommand(message):
     """
-    Handler for the sendProfileCommand callback query. It shows the user's current group and provides buttons to change the group or go back to the start.
+    Handler for the sendProfileCommand callback query. 
+    It shows the user's current group and provides buttons 
+    to change the group or go back to the start.
 
     Args:
         message (Message): The message object
@@ -252,7 +300,8 @@ async def sendProfileCommand(message):
     group_id = user.get("group_id")
     group_name = user.get("group_name")
 
-    # Create a message with the user's group and buttons to change the group or go back to the start
+    # Create a message with the user's group and buttons 
+    #   to change the group or go back to the start
     reply_message = "Ваша группа: {} - {}".format(group_id, group_name)
     markup = quick_markup({
         "Установить группу": {'callback_data' : 'configureGroup'},
@@ -261,22 +310,33 @@ async def sendProfileCommand(message):
     }, row_width=2)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup
+        )
 
 async def backCommand(message, additional_message: str = ""):
     """
-    Handler for the back command. It shows the main menu with options to view the schedule for today, tomorrow, this week, next week, or to view the user's profile.
+    Handler for the back command. 
+    It shows the main menu with options to view the schedule for today, 
+    tomorrow, this week, next week, or to view the user's profile.
 
     Args:
         message (Message): The message object
-        additional_message (str): An optional message to be displayed at the top of the menu
+        additional_message (str): An optional message 
+                                    to be displayed at the top of the menu
 
     Returns:
         None
     """
     
-    # Create a message with buttons to view the schedule for today, tomorrow, this week, next week, or to view the user's profile
-    reply_message = additional_message + "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать? \nУчитывайте что бот в бете."
+    # Create a message with buttons to view the schedule for 
+    #   today, tomorrow, this week, next week, or to view the user's profile
+    reply_message = additional_message
+    reply_message += "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    reply_message += "Учитывайте что бот в бете."
     markup = quick_markup({
         # Button to view the schedule for today
         "Сегодня": {'callback_data' : 'parseDay 0'},
@@ -288,7 +348,7 @@ async def backCommand(message, additional_message: str = ""):
         "Следующая неделя": {'callback_data' : 'parseWeek 1'},
         # Button to view the user's profile
         "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=3)
+    }, row_width=2)
     
     # Get user id from mesage
     user_id = message.reply_to_message.from_user.id
@@ -301,12 +361,19 @@ async def backCommand(message, additional_message: str = ""):
         }, row_width=1)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(
+        text=  reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup
+        )
 
 @bot.message_handler(commands=['start'])
 async def startCommand(message):
     """
-    Handler for the /start command. It shows the main menu with options to view the schedule for today, tomorrow, this week, next week, or to view the user's profile.
+    Handler for the /start command. 
+    It shows the main menu with options to view the schedule for today, 
+    tomorrow, this week, next week, or to view the user's profile.
 
     Args:
         message (Message): The message object
@@ -314,6 +381,9 @@ async def startCommand(message):
     Returns:
         None
     """
+    reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    reply_message += "Учитывайте что бот в бете."
+    
     # Create a markup with buttons for the main menu
     markup = quick_markup({
         # Button to view the schedule for today
@@ -326,7 +396,7 @@ async def startCommand(message):
         "Следующая неделя": {'callback_data' : 'parseWeek 1'},
         # Button to view the user's profile
         "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=3)
+    }, row_width=2)
     
     # If the user is not in the database, show the "Set group" button
     if not isUserKnown(message.from_user.id):
@@ -337,7 +407,9 @@ async def startCommand(message):
     # Register the buttonsCallback function as a callback query handler
     bot.register_callback_query_handler(callback = buttonsCallback, func = callbackFilter)
     # Reply to the message with the main menu
-    await bot.reply_to(message, """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?
-Учитывайте что бот в бете.""", reply_markup = markup)
+    await bot.reply_to(
+        message, 
+        reply_message, 
+        reply_markup = markup)
 
 print(list(users.find()))
