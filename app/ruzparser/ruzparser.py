@@ -118,9 +118,6 @@ class RuzParser:
         end = last_date_of_next_month.strftime('%Y.%m.%d')
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
-        for lesson in lessons_for_this_month:
-            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
-            lesson.update({"date": date})
             
         if len(lessons_for_this_month) < 1:
             return []
