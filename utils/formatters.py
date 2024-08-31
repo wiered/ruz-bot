@@ -19,78 +19,91 @@ WEEK_DAYS_LABEL_DICT = {
     6: "Воскресенье"
 }
 
-def formatDay(data, _timedelta = 0):
+def getDate(date):
+    if type (date) == str:
+        datetime_object = datetime.strptime(date, '%Y-%m-%d')
+    else:
+        datetime_object = date
+        
+    return datetime_object
+
+def formatDay(lesson):
+    lessons =""
+    
+    lessons += f"*-- {LESSON_NUMBER_DICT.get(lesson.get('beginLesson'))} пара [{lesson.get('beginLesson')} - {lesson.get('endLesson')}] --*" + '\n  '
+    lessons += lesson.get("discipline") + f" ({parseKindOfWork(lesson.get('kindOfWork'))})" + '\n  '
+    lessons += f"Аудитория: {lesson.get('auditorium').split('/')[1]}" + '\n  '
+    lessons += f"Преподаватель: {lesson.get('lecturer_title')}, {lesson.get('lecturer_rank')}" + '\n'
+    
+    return lessons
+
+def escapeMessage(message):
+    replacables = ['.', '-', '(', ')', "=", "{", "}"]
+    for ch in replacables:            
+        message = message.replace(ch, f"\\{ch}")
+        
+    return message
+
+def formatDayMessage(data, _timedelta = 0):
     """
-    Format schedule for group for one day
+    Format message for group for one day
     
     Args:
         data (dict): Schedule in JSON format
         _timedelta (int): Timedelta in days. Default is 0
     
     Returns:
-        str: Formatted schedule
+        str: Formatted message
     """
     date = datetime.today() + timedelta(days = _timedelta)
     week_day = WEEK_DAYS_LABEL_DICT.get(date.weekday())
     date = date.strftime('%d.%m')
     
-    lessions = ""
-    for i in range(len(data)): 
-        lessions += f"-- {LESSON_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --" + '\n'
-        lessions += data[i].get("discipline") + f" ({parseKindOfWork(data[i].get('kindOfWork'))})" + '\n'
-        lessions += f"Аудитория: {data[i].get('auditorium').split('/')[1]}" + '\n'
-        lessions += f"Преподаватель: {data[i].get('lecturer_title')}, {data[i].get('lecturer_rank')}" + '\n'
+    if len(data) == 0:
+        return escapeMessage(f"= {date} = \n\nПар нет")
     
-    if lessions == "":
-        return f"= {date} = \n\nПар нет"
+    lessons = ""
+    for lesson in data:
+        lessons += formatDay(lesson)
     
-    return f"= {week_day} ({date}) = \n{lessions}"
+    return escapeMessage(f"= {week_day} ({date}) = \n{lessons}")
     
-def formatWeek(data):
+def formatWeekMessage(data):
     """
-    Format schedule for group for one week
+    Format message for group for one week
     
     Args:
         data (dict): Schedule in JSON format
     
     Returns:
-        str: Formatted schedule
+        str: Formatted message
     """
+    if len(data) == 0:
+        return "Пар нет"
+    
     dates = {
     }
     for i in range(len(data)):
-        datetime_object = datetime.strptime(data[i].get("date"), '%Y-%m-%d')
+        datetime_object = getDate(data[i].get("date"))
         week_day = WEEK_DAYS_LABEL_DICT.get(datetime_object.weekday())
         dates.update(
-            {data[i].get("date"): f"_= {week_day} ({'.'.join(data[i].get('date').split('-')[1:])}) =_ \n"}
+            {data[i].get("date"): f"_= {week_day} ({datetime_object.strftime('%d.%m')}) =_ \n"}
             )
     
-    for i in range(len(data)):
-        tmp = dates.get(data[i].get("date"))
-        tmp += f"*-- {LESSON_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --*" + '\n  '
-        tmp += data[i].get("discipline") + f" ({parseKindOfWork(data[i].get('kindOfWork'))})" + '\n  '
-        tmp += f"Аудитория: {data[i].get('auditorium').split('/')[1]}" + '\n  '
-        tmp += f"Преподаватель: {data[i].get('lecturer_title')}, {data[i].get('lecturer_rank')}" + '\n'
-        
-        dates.update({data[i].get("date"): tmp})
+    for lesson in data:
+        tmp = dates.get(lesson.get("date")) + formatDay(lesson)
+        dates.update({lesson.get("date"): tmp})
     
-    # split this by "-": list(dates.keys())[0] and replace "-" with dost, then conver to string
+    datetime_object = getDate(data[0].get("date"))
     
-    if len(list(dates.keys())) == 0:
-        return "Пар нет"
-    
-    lessions = "== Расписание на неделю {} - {} == \n\n".format(
-        ".".join(list(dates.keys())[0].split('-'))[5:], 
-        ".".join(list(dates.keys())[-1].split('-'))[5:]
+    lessons = "== Расписание на неделю {} - {} == \n\n".format(
+        datetime_object.strftime('%d.%m'), 
+        (datetime_object + timedelta(days=5)).strftime('%d.%m')
         )
     for key in dates.keys():
-        lessions += dates.get(key) + "\n"
+        lessons += dates.get(key) + "\n"
     
-    replacables = ['.', '-', '(', ')', "="]
-    for ch in replacables:            
-        lessions = lessions.replace(ch, f"\\{ch}")
-    
-    return lessions
+    return escapeMessage(lessons)
     
 def parseKindOfWork(kind_of_work):
     """
