@@ -22,7 +22,7 @@ async def updateLessonsSchedulesChache() -> None:
     
     # For each group, parse the schedule and save it to the database
     for group in groups:
-        print("Parsing " + group)
+        print(f"Parsing {group}")
         # Parse the schedule for the group
         lessons_for_group = await parser.parseSchedule(group)
         
