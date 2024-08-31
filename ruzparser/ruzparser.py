@@ -7,7 +7,7 @@ from typing import List
 import aiohttp
 import requests
 
-from db import lessons
+import db
 
 GROUP_URL = "https://ruz.mstuca.ru/api/search?term={}&type=group"
 LESSIONS_URL = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
@@ -113,11 +113,7 @@ class RuzParser:
         end = last_day_of_month.strftime('%Y.%m.%d')
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
-        lessons.insert_many(lessons_for_this_month)
-    
-        for lesson in lessons.find():
-            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
-            lessons.update_one({"_id": lesson.get("_id")}, {"$set": {"date": date}})
+        db.saveMonthLessonsToDB(lessons_for_this_month)
         
         return lessons_for_this_month
     

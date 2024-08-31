@@ -1,1 +1,1 @@
-from .db import db, users, lessons
+from .db import *
