@@ -5,6 +5,7 @@ import db
 import ruzparser
 from ruzbot import bot
 from daily_timer import timerPooling
+from ruzbot.callbacks import register_handlers
 
 async def updateLessonsSchedulesChache() -> None:
     """
@@ -36,6 +37,9 @@ async def updateLessonsSchedulesChache() -> None:
         await asyncio.sleep(20)
 
 async def startBot():
+    # Register the textCallback as a message handler
+    register_handlers(bot)
+    
     await bot.polling()
     
 async def startTimer():
