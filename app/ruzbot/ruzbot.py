@@ -2,10 +2,12 @@ import logging
 import os
 import random
 import re
+from datetime import datetime, timedelta
 
 from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
+import db
 from ruzparser import RuzParser
 from utils import formatters, getRandomGroup
 from db import users
@@ -175,13 +177,18 @@ async def dateCommand(message, _timedelta):
     """
     
     # convert _timedelta to int
-    _timedelta = int(_timedelta)
     logging.info('Running date command {}'.format(_timedelta))
     # get user id from message
     user_id = message.reply_to_message.from_user.id
     # get user's group id from database
     group_id = users.find_one({"id":user_id}).get("group_id")
-    data = await parser.parseDay(group_id, _timedelta)
+    
+    # get date
+    _timedelta = int(_timedelta)
+    date = datetime.today() + timedelta(days=_timedelta)
+    
+    # parse the schedule for the specified date
+    data = await parser.parseDay(group_id, date)
     
     reply_message = formatters.formatDayMessage(data, _timedelta)
     markup = quick_markup({
@@ -210,13 +217,17 @@ async def weekCommand(message, _timedelta):
     Returns:
         None
     """
-    _timedelta = int(_timedelta)
     logging.info('Running week command {}'.format(_timedelta))
     user_id = message.reply_to_message.from_user.id
     # Get the user's group id from database
     group_id = users.find_one({"id":user_id}).get("group_id")
+    
+    # get date
+    _timedelta = int(_timedelta)
+    date = datetime.today() + timedelta(weeks=_timedelta)
+    
     # Parse the schedule for the specified week
-    data = await parser.parseWeek(group_id, _timedelta)
+    data = await parser.parseWeek(group_id, date)
     
     # Get the formatted schedule for the week
     reply_message = formatters.formatWeekMessage(data)

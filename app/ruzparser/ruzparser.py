@@ -52,37 +52,34 @@ class RuzParser:
         
         return json
     
-    async def parseDay(self, group: str, _timedelta: int = 0) -> dict:
+    async def parseDay(self, group: str, date: datetime) -> dict:
         """
         Parse schedule for group for one day
         
         Args:
             group (str): Group name
-            _timedelta (int): Timedelta in days. Default is 0
+            date (date): date
         
         Returns:
             dict: Schedule in JSON format
         """
-        _timedelta = int(_timedelta)
             
-        date = datetime.today() + timedelta(days=_timedelta)
         date = date.strftime('%Y.%m.%d')
         return await self.parse(group, date, date)
     
-    async def parseWeek(self, group: str, _timedelta: int = 0) -> List[dict]:
+    async def parseWeek(self, group: str, date: datetime) -> List[dict]:
         """
         Parse schedule for group for one week
         
         Args:
             group (str): Group name
-            _timedelta (int): Timedelta in weeks. Default is 0
+            date (datetime): date
         
         Returns:
             List[dict]: Schedule in JSON format
         """
-        logging.info(f'parseWeek: {group} {_timedelta}')
+        logging.info(f'parseWeek: {group} {date}')
         
-        date = datetime.today() + timedelta(days = _timedelta * 7)
         start = date - timedelta(days=date.weekday())
         end = start + timedelta(days=6)
         
