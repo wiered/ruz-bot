@@ -2,6 +2,7 @@ import calendar
 import json
 import logging
 from datetime import datetime, timedelta
+from typing import List
 
 import aiohttp
 import requests
@@ -16,22 +17,16 @@ class RuzParser:
     """
     Class for parsing schedule from MSTUCA
     """
-    def __init__(self):
-        """
-        Init class
-        """
-        pass
-    
     async def fetch(self, client: aiohttp.ClientSession, url: str) -> dict:
         """
         Fetches JSON data from the given URL.
-        
+
         Args:
-            client: The aiohttp client session.
-            url: The URL to fetch.
-        
+            client (aiohttp.ClientSession): The aiohttp client session.
+            url (str): The URL to fetch.
+
         Returns:
-            The JSON data as a dictionary.
+            dict: The JSON data as a dictionary.
         """
         async with client.get(url) as resp:
             # Check if the request was successful
@@ -39,7 +34,7 @@ class RuzParser:
             # Get the JSON data from the response
             return await resp.json(encoding="Windows-1251")
     
-    async def parse(self, group, start_date, end_date):
+    async def parse(self, group: str, start_date: str, end_date: str) -> dict:
         """
         Parse schedule for group from start_date to end_date
         
@@ -53,12 +48,12 @@ class RuzParser:
         """
         logging.info(f"Running parse for {group} from {start_date} to {end_date}")
         async with aiohttp.ClientSession() as session:
-            json = await self.fetch(session, LESSIONS_URL.format(group, start_date, end_date))
+            json: dict = await self.fetch(session, LESSIONS_URL.format(group, start_date, end_date))
         
         return json
 
     
-    async def parseDay(self, group, _timedelta = 0):
+    async def parseDay(self, group: str, _timedelta: int = 0) -> dict:
         """
         Parse schedule for group for one day
         
@@ -79,7 +74,7 @@ class RuzParser:
         date = date.strftime('%Y.%m.%d')
         return await self.parse(group, date, date)
     
-    async def parseWeek(self, group, _timedelta: int = 0):
+    async def parseWeek(self, group: str, _timedelta: int = 0) -> List[dict]:
         """
         Parse schedule for group for one week
         
@@ -88,7 +83,7 @@ class RuzParser:
             _timedelta (int): Timedelta in weeks. Default is 0
         
         Returns:
-            dict: Schedule in JSON format
+            List[dict]: Schedule in JSON format
         """
         logging.info(f'parseWeek: {group} {_timedelta}')
         
@@ -102,28 +97,27 @@ class RuzParser:
         logging.info(f'parseWeek: {start} {end}')
         return await self.parse(group, start, end)
     
-    async def parseThisMonth(self, group):
+    async def parseThisMonth(self, group: str) -> List[dict]:
         """
-        Parse schedule for group for one week
+        Parse schedule for group for one month
         
         Args:
             group (str): Group name
-            _timedelta (int): Timedelta in weeks. Default is 0
         
         Returns:
-            dict: Schedule in JSON format
+            List[dict]: Schedule in JSON format
         """
         logging.info(f'parsing this month for group {group}')
         
         first_day_of_month = datetime.today().replace(day=1)
-        last_day_of_month =first_day_of_month + timedelta(
+        last_day_of_month = first_day_of_month + timedelta(
             days=calendar.monthrange(first_day_of_month.year, first_day_of_month.month)[1] - 1
             )
         
         start = first_day_of_month.strftime('%Y.%m.%d')
         end = last_day_of_month.strftime('%Y.%m.%d')
         
-        lessons_for_this_month = await self.parse(group, start, end)
+        lessons_for_this_month: List[dict] = await self.parse(group, start, end)
         lessons.insert_many(lessons_for_this_month)
         
         for lesson in lessons.find():
@@ -132,9 +126,15 @@ class RuzParser:
         
         return lessons_for_this_month
     
-    async def search_group(self, group_name):
+    async def search_group(self, group_name: str) -> List[dict]:
         """
         Search group in MSTUCA
+
+        Args:
+            group_name (str): Group name
+
+        Returns:
+            List[dict]: List of groups
         """
         async with aiohttp.ClientSession() as session:
             json = await self.fetch(session, GROUP_URL.format(group_name))
