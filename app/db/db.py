@@ -68,7 +68,8 @@ def isDayChached(group_id, date):
     
     return True
     
-def isWeekChached(group_id, start, end):
+def isWeekChached(group_id, date):
+    start, end = getStartAndEndOfWeek(date)
     if not isGroupChached(group_id):
         return False
     
@@ -82,8 +83,8 @@ def isWeekChached(group_id, start, end):
     
     return True
 
-def getDay(group_id, _timedelta):
-    date, _ = getStartEndOfDay(datetime.now() + timedelta(days=_timedelta))
+def getDay(group_id, date: datetime):
+    date, _ = getStartEndOfDay(date)
     if not isDayChached(group_id, date):
         raise ValueError
     
@@ -100,9 +101,9 @@ def getDay(group_id, _timedelta):
             
     return day_lessons   
 
-def getWeek(group_id, _timedelta):
-    start, end = getStartAndEndOfWeek(datetime.now() + timedelta(days=_timedelta * 7))
-    if not isWeekChached(group_id, start, end):
+def getWeek(group_id, date: datetime):
+    start, end = getStartAndEndOfWeek(date)
+    if not isWeekChached(group_id, date):
         raise ValueError
     
     i = 0
