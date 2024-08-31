@@ -89,17 +89,17 @@ class RuzParser:
         logging.info(f'parsing week {start} - {end}')
         return await self.parse(group, start, end)
     
-    async def parseSchedule(self, group: str) -> List[dict]:
+    async def parseSchedule(self, group_id: str) -> List[dict]:
         """
         Parse schedule for group for one month
         
         Args:
-            group (str): Group name
+            group_id (str): Group id
         
         Returns:
             List[dict]: Schedule in JSON format
         """
-        logging.info(f'parsing this month for group {group}')
+        logging.info(f'parsing this month for group {group_id}')
         
         first_date_of_this_month = datetime.today().replace(day=1)
         first_date_of_previous_month = (first_date_of_this_month - timedelta(days=2)).replace(day=1)
@@ -114,7 +114,7 @@ class RuzParser:
         start = first_date_of_previous_month.strftime('%Y.%m.%d')
         end = last_date_of_next_month.strftime('%Y.%m.%d')
         
-        lessons_for_this_month: List[dict] = await self.parse(group, start, end)
+        lessons_for_this_month: List[dict] = await self.parse(group_id, start, end)
         for lesson in lessons_for_this_month:
             date = datetime.strptime(lesson.get("date"), "%Y-%m-%d")
             lesson.update({"date": date})
