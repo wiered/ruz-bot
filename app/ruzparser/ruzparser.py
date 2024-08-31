@@ -113,7 +113,9 @@ class RuzParser:
         end = last_day_of_month.strftime('%Y.%m.%d')
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
-        db.saveMonthLessonsToDB(lessons_for_this_month)
+        for lesson in lessons_for_this_month:
+            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
+            lesson.update({"date": date})
         
         return lessons_for_this_month
     

@@ -8,9 +8,15 @@ db = client.ruzbotdb
 users = db.users
 lessons = db.lessons
 
-def saveMonthLessonsToDB(lessons_for_this_month):
-    lessons.insert_many(lessons_for_this_month)
+def saveMonthLessonsToDB(group, lessons_for_this_month):
+    if lessons.count_documents({"group_id": group}) > 0:
+        lessons.delete_one({"group_id": group})
+    
+    lessons.insert_one({
+        "group_id": group,
+        "last_update": datetime.now().strftime("%Y-%m-%d"),
+        "lessons": lessons_for_this_month
+    })
         
-    for lesson in lessons.find():
-        date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
-        lessons.update_one({"_id": lesson.get("_id")}, {"$set": {"date": date}})
+def getAllGroupsList():
+    return users.distinct("group_id")
