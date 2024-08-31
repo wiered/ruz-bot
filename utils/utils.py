@@ -1,3 +1,5 @@
+import random
+
 RANDOM_GROUP_NAMES = [
     'ИС222', 
     'ИС221',
@@ -27,3 +29,12 @@ RANDOM_GROUP_NAMES = [
     'УВД231',
     'УВД241',
     ]
+
+def getRandomGroup() -> str:
+    """
+    Returns a random group name from the RANDOM_GROUP_NAMES list.
+
+    Returns:
+        str: A random group name.
+    """
+    return random.choice(RANDOM_GROUP_NAMES)

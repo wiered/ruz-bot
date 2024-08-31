@@ -7,7 +7,7 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
 from ruzparser import RuzParser
-from utils import RANDOM_GROUP_NAMES, formatters
+from utils import formatters, getRandomGroup
 from db import users
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
@@ -124,7 +124,10 @@ async def textCallback(callback):
             group_name = callback.text
             groups_list = await parser.search_group(group_name)
             if not groups_list:
-                await bot.reply_to(callback, f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {random.choice(RANDOM_GROUP_NAMES)}")
+                await bot.reply_to(
+                    callback, 
+                    f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {getRandomGroup()}"
+                    )
                 return
 
             markup = quick_markup({
