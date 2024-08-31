@@ -20,7 +20,7 @@ class Timer:
 
 async def isParsingTime():
     hour = int(datetime.today().strftime('%H'))
-    if hour == 12 or hour == 16:
+    if hour == 12 or hour == 6:
         await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups():
@@ -35,6 +35,7 @@ async def parseMonthlyScheduleForGroups():
         lessons_for_group = await parser.parseSchedule(group)
         print(type(lessons_for_group))
         saveMonthLessonsToDB(group, lessons_for_group)
+        await asyncio.sleep(20)
             
     return
 
