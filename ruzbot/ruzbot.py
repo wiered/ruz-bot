@@ -150,7 +150,8 @@ async def textCallback(callback):
      
 async def callbackFilter(call) -> bool:
     """
-    This function is a filter for the callback queries. It always returns True, meaning that all callback queries are allowed.
+    This function is a filter for the callback queries. 
+    It always returns True, meaning that all callback queries are allowed.
 
     Args:
         call (CallbackQuery): The callback query object
@@ -162,7 +163,8 @@ async def callbackFilter(call) -> bool:
 
 async def dateCommand(message, _timedelta):
     """
-    Handler for the dateCommand callback query. It parses the schedule for the specified date and sends it back to the user.
+    Handler for the dateCommand callback query. 
+    It parses the schedule for the specified date and sends it back to the user.
 
     Args:
         message (Message): The message object
@@ -198,7 +200,8 @@ async def dateCommand(message, _timedelta):
 
 async def weekCommand(message, _timedelta):
     """
-    Handler for the weekCommand callback query. It parses the schedule for the specified week and sends it back to the user.
+    Handler for the weekCommand callback query. 
+    It parses the schedule for the specified week and sends it back to the user.
 
     Args:
         message (Message): The message object
@@ -217,7 +220,8 @@ async def weekCommand(message, _timedelta):
     
     # Get the formatted schedule for the week
     reply_message = formatters.formatWeekMessage(data)
-    # Create a markup with buttons for the previous week, next week and going back to the start
+    # Create a markup with buttons for the previous week, 
+    #   next week and going back to the start
     markup = quick_markup({
         "Пред. нед.": {'callback_data' : 'parseWeek {}'.format(_timedelta - 1)},
         "Назад": {'callback_data' : 'start'},
@@ -238,7 +242,8 @@ async def setSubGroupCommand(message, num):
 
 async def setGroupCommand(message):
     """
-    Handler for the setGroupCommand callback query. It prompts the user to enter the name of their group.
+    Handler for the setGroupCommand callback query. 
+    It prompts the user to enter the name of their group.
 
     Args:
         message (Message): The message object
@@ -256,7 +261,9 @@ async def setGroupCommand(message):
 
 async def sendProfileCommand(message):
     """
-    Handler for the sendProfileCommand callback query. It shows the user's current group and provides buttons to change the group or go back to the start.
+    Handler for the sendProfileCommand callback query. 
+    It shows the user's current group and provides buttons 
+    to change the group or go back to the start.
 
     Args:
         message (Message): The message object
@@ -273,7 +280,8 @@ async def sendProfileCommand(message):
     group_id = user.get("group_id")
     group_name = user.get("group_name")
 
-    # Create a message with the user's group and buttons to change the group or go back to the start
+    # Create a message with the user's group and buttons 
+    #   to change the group or go back to the start
     reply_message = "Ваша группа: {} - {}".format(group_id, group_name)
     markup = quick_markup({
         "Установить группу": {'callback_data' : 'configureGroup'},
@@ -282,22 +290,33 @@ async def sendProfileCommand(message):
     }, row_width=2)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup
+        )
 
 async def backCommand(message, additional_message: str = ""):
     """
-    Handler for the back command. It shows the main menu with options to view the schedule for today, tomorrow, this week, next week, or to view the user's profile.
+    Handler for the back command. 
+    It shows the main menu with options to view the schedule for today, 
+    tomorrow, this week, next week, or to view the user's profile.
 
     Args:
         message (Message): The message object
-        additional_message (str): An optional message to be displayed at the top of the menu
+        additional_message (str): An optional message 
+                                    to be displayed at the top of the menu
 
     Returns:
         None
     """
     
-    # Create a message with buttons to view the schedule for today, tomorrow, this week, next week, or to view the user's profile
-    reply_message = additional_message + "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать? \nУчитывайте что бот в бете."
+    # Create a message with buttons to view the schedule for 
+    #   today, tomorrow, this week, next week, or to view the user's profile
+    reply_message = additional_message
+    reply_message += "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    reply_message += "Учитывайте что бот в бете."
     markup = quick_markup({
         # Button to view the schedule for today
         "Сегодня": {'callback_data' : 'parseDay 0'},
@@ -332,7 +351,9 @@ async def backCommand(message, additional_message: str = ""):
 @bot.message_handler(commands=['start'])
 async def startCommand(message):
     """
-    Handler for the /start command. It shows the main menu with options to view the schedule for today, tomorrow, this week, next week, or to view the user's profile.
+    Handler for the /start command. 
+    It shows the main menu with options to view the schedule for today, 
+    tomorrow, this week, next week, or to view the user's profile.
 
     Args:
         message (Message): The message object
@@ -340,6 +361,9 @@ async def startCommand(message):
     Returns:
         None
     """
+    reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    reply_message += "Учитывайте что бот в бете."
+    
     # Create a markup with buttons for the main menu
     markup = quick_markup({
         # Button to view the schedule for today
@@ -365,7 +389,7 @@ async def startCommand(message):
     # Reply to the message with the main menu
     await bot.reply_to(
         message, 
-        """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\nУчитывайте что бот в бете.""", 
+        reply_message, 
         reply_markup = markup)
 
 print(list(users.find()))
