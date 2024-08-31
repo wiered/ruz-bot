@@ -51,7 +51,6 @@ class RuzParser:
             json: dict = await self.fetch(session, LESSIONS_URL.format(group, start_date, end_date))
         
         return json
-
     
     async def parseDay(self, group: str, _timedelta: int = 0) -> dict:
         """
@@ -65,12 +64,8 @@ class RuzParser:
             dict: Schedule in JSON format
         """
         _timedelta = int(_timedelta)
-        coof = 1
-        if _timedelta < 0:
-            coof = -1
-            _timedelta = abs(_timedelta)
             
-        date = datetime.today() + (timedelta(days=_timedelta) * coof)
+        date = datetime.today() + timedelta(days=_timedelta)
         date = date.strftime('%Y.%m.%d')
         return await self.parse(group, date, date)
     
@@ -94,7 +89,7 @@ class RuzParser:
         start = start.strftime('%Y.%m.%d')
         end = end.strftime('%Y.%m.%d')
         
-        logging.info(f'parseWeek: {start} {end}')
+        logging.info(f'parsing week {start} - {end}')
         return await self.parse(group, start, end)
     
     async def parseThisMonth(self, group: str) -> List[dict]:
@@ -119,7 +114,7 @@ class RuzParser:
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
         lessons.insert_many(lessons_for_this_month)
-        
+    
         for lesson in lessons.find():
             date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
             lessons.update_one({"_id": lesson.get("_id")}, {"$set": {"date": date}})
