@@ -15,6 +15,7 @@ async def updateLessonsSchedulesChache() -> None:
     """
     # Get all groups from the database
     groups = db.getAllGroupsList()
+    print(groups)
     
     # Get parser
     parser = ruzparser.RuzParser()
