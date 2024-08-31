@@ -14,7 +14,7 @@ def saveMonthLessonsToDB(group, lessons_for_this_month):
     
     lessons.insert_one({
         "group_id": group,
-        "last_update": datetime.now().strftime("%Y-%m-%d"),
+        "last_update": datetime.now(),
         "lessons": lessons_for_this_month
     })
         
