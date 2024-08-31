@@ -1,3 +1,3 @@
 from .ruzbot import bot
-from .callbacks import *
+from .handlers import *
 from .commands import *
