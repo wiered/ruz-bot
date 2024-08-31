@@ -19,28 +19,68 @@ WEEK_DAYS_LABEL_DICT = {
     6: "Воскресенье"
 }
 
-def getDate(date):
-    if type (date) == str:
+def getDate(date: str | datetime) -> datetime:
+    """
+    Function to convert input date to datetime object.
+
+    Args:
+        date (str | datetime): The date to convert. If str, it should be in '%Y-%m-%d' format.
+    
+    Returns:
+        datetime: The datetime object.
+    """
+    if isinstance(date, str):
         datetime_object = datetime.strptime(date, '%Y-%m-%d')
     else:
         datetime_object = date
         
     return datetime_object
 
+
 def formatDay(lesson):
-    lessons =""
+    """
+    Format one lesson into a string.
+
+    Args:
+        lesson (dict): The lesson to format.
+
+    Returns:
+        str: The formatted lesson.
+    """
+    lessons = ""
     
+    # Add the lesson number
     lessons += f"*-- {LESSON_NUMBER_DICT.get(lesson.get('beginLesson'))} пара [{lesson.get('beginLesson')} - {lesson.get('endLesson')}] --*" + '\n  '
+    
+    # Add the lesson discipline and kind of work
     lessons += lesson.get("discipline") + f" ({parseKindOfWork(lesson.get('kindOfWork'))})" + '\n  '
+    
+    # Add the lesson auditorium
     lessons += f"Аудитория: {lesson.get('auditorium').split('/')[1]}" + '\n  '
+    
+    # Add the lesson lecturer
     lessons += f"Преподаватель: {lesson.get('lecturer_title')}, {lesson.get('lecturer_rank')}" + '\n'
     
     return lessons
 
 def escapeMessage(message):
-    replacables = ['.', '-', '(', ')', "=", "{", "}"]
-    for ch in replacables:            
-        message = message.replace(ch, f"\\{ch}")
+    """
+    Escape special characters in a string so that they won't break the Markdown formatting.
+
+    Args:
+        message (str): The string to escape.
+
+    Returns:
+        str: The escaped string.
+    """
+    
+    # List of special characters that must be escaped
+    replacables = ['.', '-', '(', ')', "=", "{", "}"]  
+    
+    # Iterate over each character in the list
+    for ch in replacables:
+        # Replace the character with its escaped version
+        message = message.replace(ch, f"\\{ch}")  
         
     return message
 

@@ -58,7 +58,7 @@ class RuzParser:
         
         Args:
             group (str): Group name
-            date (date): date
+            date (datetime): date
         
         Returns:
             dict: Schedule in JSON format
