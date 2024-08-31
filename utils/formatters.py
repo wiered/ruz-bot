@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-LESSION_NUMBER_DICT = {
+LESSON_NUMBER_DICT = {
     "08:30": 1,
     "10:10": 2,
     "12:40": 3,
@@ -36,7 +36,7 @@ def formatDay(data, _timedelta = 0):
     
     lessions = ""
     for i in range(len(data)): 
-        lessions += f"-- {LESSION_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --" + '\n'
+        lessions += f"-- {LESSON_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --" + '\n'
         lessions += data[i].get("discipline") + f" ({parseKindOfWork(data[i].get('kindOfWork'))})" + '\n'
         lessions += f"Аудитория: {data[i].get('auditorium').split('/')[1]}" + '\n'
         lessions += f"Преподаватель: {data[i].get('lecturer_title')}, {data[i].get('lecturer_rank')}" + '\n'
@@ -67,7 +67,7 @@ def formatWeek(data):
     
     for i in range(len(data)):
         tmp = dates.get(data[i].get("date"))
-        tmp += f"*-- {LESSION_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --*" + '\n  '
+        tmp += f"*-- {LESSON_NUMBER_DICT.get(data[i].get('beginLesson'))} пара [{data[i].get('beginLesson')} - {data[i].get('endLesson')}] --*" + '\n  '
         tmp += data[i].get("discipline") + f" ({parseKindOfWork(data[i].get('kindOfWork'))})" + '\n  '
         tmp += f"Аудитория: {data[i].get('auditorium').split('/')[1]}" + '\n  '
         tmp += f"Преподаватель: {data[i].get('lecturer_title')}, {data[i].get('lecturer_rank')}" + '\n'
@@ -92,14 +92,14 @@ def formatWeek(data):
     
     return lessions
     
-def parseKindOfWork(kindOfWork):
+def parseKindOfWork(kind_of_work):
     """
     Parse kind of work
     """
-    if kindOfWork == "Лекция":
+    if kind_of_work == "Лекции":
         return "Лек."
-    if kindOfWork == "Практические (семинарские) занятия":
+    if kind_of_work == "Практические (семинарские) занятия":
         return "Пр. зан."
     
-    return kindOfWork
+    return kind_of_work
     
