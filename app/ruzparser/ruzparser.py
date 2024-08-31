@@ -116,6 +116,9 @@ class RuzParser:
         for lesson in lessons_for_this_month:
             date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
             lesson.update({"date": date})
+            
+        if len(lessons_for_this_month) < 1:
+            return []
         
         return lessons_for_this_month
     
@@ -133,3 +136,4 @@ class RuzParser:
             json = await self.fetch(session, GROUP_URL.format(group_name))
         
         return json
+    
