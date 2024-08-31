@@ -230,11 +230,12 @@ async def weekCommand(message, _timedelta):
     _timedelta = int(_timedelta)
     date = datetime.today() + timedelta(weeks=_timedelta)
     
+    # check if week is chached or not
     if db.isWeekChached(group_id, date):
-        # get data from db
+        # if yes get data from db
         data = db.getWeek(group_id, date)
     else:
-        # Parse the schedule for the specified week
+        # if not, then parse it from site
         data = await parser.parseWeek(group_id, date)
     
     # Get the formatted schedule for the week
