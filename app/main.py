@@ -21,12 +21,13 @@ async def updateLessonsSchedulesChache() -> None:
     
     # For each group, parse the schedule and save it to the database
     for group in groups:
+        print("Parsing " + group)
         # Parse the schedule for the group
         lessons_for_group = await parser.parseSchedule(group)
         
         # Save the schedule to the database
         db.saveMonthLessonsToDB(group, lessons_for_group)
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
 
 async def startBot():
     await bot.polling()
