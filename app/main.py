@@ -15,17 +15,20 @@ async def updateLessonsSchedulesChache() -> None:
     """
     # Get all groups from the database
     groups = db.getAllGroupsList()
+    print(groups)
     
     # Get parser
     parser = ruzparser.RuzParser()
     
     # For each group, parse the schedule and save it to the database
     for group in groups:
+        print("Parsing " + group)
         # Parse the schedule for the group
         lessons_for_group = await parser.parseSchedule(group)
         
         # Save the schedule to the database
         db.saveMonthLessonsToDB(group, lessons_for_group)
+        await asyncio.sleep(10)
 
 async def startBot():
     await bot.polling()
