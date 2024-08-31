@@ -187,8 +187,12 @@ async def dateCommand(message, _timedelta):
     _timedelta = int(_timedelta)
     date = datetime.today() + timedelta(days=_timedelta)
     
-    # parse the schedule for the specified date
-    data = await parser.parseDay(group_id, date)
+    if db.isDayChached(group_id, date):
+        # get data from db
+        data = db.getDay(group_id, date)
+    else:
+        # parse the schedule for the specified date
+        data = await parser.parseDay(group_id, date)
     
     reply_message = formatters.formatDayMessage(data, _timedelta)
     markup = quick_markup({
@@ -226,8 +230,12 @@ async def weekCommand(message, _timedelta):
     _timedelta = int(_timedelta)
     date = datetime.today() + timedelta(weeks=_timedelta)
     
-    # Parse the schedule for the specified week
-    data = await parser.parseWeek(group_id, date)
+    if db.isWeekChached(group_id, date):
+        # get data from db
+        data = db.getWeek(group_id, date)
+    else:
+        # Parse the schedule for the specified week
+        data = await parser.parseWeek(group_id, date)
     
     # Get the formatted schedule for the week
     reply_message = formatters.formatWeekMessage(data)
