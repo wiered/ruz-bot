@@ -22,6 +22,14 @@ def isUserKnown(user_id):
         return True
     return False
 
+def isUserHasSubGroup(user_id: int) -> bool:
+    if users.find_one(
+        {"id":547334624, "sub_group": {"$exists": False}}
+        ):
+        return False
+    
+    return True
+
 async def setGroup(callback, group_id, group_name) -> str:
     """
     Sets a group for the user and saves it to the database.
@@ -90,24 +98,20 @@ async def buttonsCallback(callback):
         case ['parseWeek', *args]:
             # Call the week command with the argument from the callback query
             await weekCommand(callback.message, args[0])
+            
+        # If the callback query is for the show profile button
+        case ['showProfile']:
+            # Call the send profile command with the callback query message
+            await sendProfileCommand(callback.message)
 
         # If the callback query is for the configure group button
         case ['configureGroup']:
             # Call the set group command with the reply to message from the callback query
             await setGroupCommand(callback.message.reply_to_message)
-
-        # If the callback query is for the show profile button
-        case ['showProfile']:
+            
+        case ['configureSubGroup']:
             # Call the send profile command with the callback query message
-            await sendProfileCommand(callback.message)
-        
-        case ['setSubGroup', *args]:
-            additional_message = "Ваша подгруппа установлена: {}!\n\n".format(args[0])
-            await backCommand(callback.message, additional_message)
-        
-        case ['setSubGroupCommand', *args]:
-            # Call the send profile command with the callback query message
-            await setSubGroupCommand(callback.message, args[0])
+            await setSubGroupCommand(callback.message)
 
         # If the callback query is for the set group button
         case ['setGroup', *args]:
@@ -128,7 +132,10 @@ async def buttonsCallback(callback):
             logging.warn("Wrong comand")
 
 async def textCallback(callback):
-    match tuple(i for i, pattern in enumerate([r"\W*\d*"]) if re.match(pattern, callback.text)):
+    match tuple(i for i, pattern in enumerate([
+                                            r"\w+\d+",
+                                            r"\d",
+                                            ]) if re.match(pattern, callback.text)):
         case (0,):
             group_name = callback.text
             groups_list = await parser.search_group(group_name)
@@ -147,6 +154,13 @@ async def textCallback(callback):
             }, row_width=1)
 
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
+        case (1, ):
+            sub_group_number = int(callback.text)
+            users.update_one({"id": callback.from_user.id}, {"$set": {"sub_group": sub_group_number}})
+            message = await bot.reply_to(callback, "Ваша подгруппа установлена!")
+            
+            additional_message = "Ваша подгруппа установлена: {}!\n\n".format(callback.text)
+            await backCommand(message, additional_message)
         case _:
             logging.warn("Wrong case")
      
@@ -257,28 +271,6 @@ async def weekCommand(message, _timedelta):
         parse_mode = "MarkdownV2"
         )
 
-async def setSubGroupCommand(message, num):
-    pass
-
-async def setGroupCommand(message):
-    """
-    Handler for the setGroupCommand callback query. 
-    It prompts the user to enter the name of their group.
-
-    Args:
-        message (Message): The message object
-
-    Returns:
-        None
-    """
-    # Register the textCallback as a message handler
-    bot.register_message_handler(callback = textCallback)
-    # Reply to the message with a prompt to enter the group name
-    await bot.reply_to(
-        message, 
-        "Введи имя группы полностью(например ИС221): "
-        )
-
 async def sendProfileCommand(message):
     """
     Handler for the sendProfileCommand callback query. 
@@ -299,10 +291,11 @@ async def sendProfileCommand(message):
     # Get user's group id and name
     group_id = user.get("group_id")
     group_name = user.get("group_name")
+    sub_group = user.get("sub_group")
 
     # Create a message with the user's group and buttons 
     #   to change the group or go back to the start
-    reply_message = "Ваша группа: {} - {}".format(group_id, group_name)
+    reply_message = f"Ваш профиль: \nГруппа: {group_name}\nПодгруппа: {sub_group}\ngroup_id: {group_id}"
     markup = quick_markup({
         "Установить группу": {'callback_data' : 'configureGroup'},
         "Назад": {'callback_data' : 'start'},
@@ -315,6 +308,44 @@ async def sendProfileCommand(message):
         chat_id = message.chat.id, 
         message_id = message.message_id, 
         reply_markup = markup
+        )
+
+async def setGroupCommand(message):
+    """
+    Handler for the setGroupCommand callback query. 
+    It prompts the user to enter the name of their group.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    # Register the textCallback as a message handler
+    bot.register_message_handler(callback = textCallback)
+    # Reply to the message with a prompt to enter the group name
+    await bot.reply_to(
+        message, 
+        "Введи имя группы полностью(например ИС221): "
+        )
+
+async def setSubGroupCommand(message):
+    """
+    Handler for the setGroupCommand callback query. 
+    It prompts the user to enter the name of their group.
+
+    Args:
+        message (Message): The message object
+
+    Returns:
+        None
+    """
+    # Register the textCallback as a message handler
+    bot.register_message_handler(callback = textCallback)
+    # Reply to the message with a prompt to enter the group name
+    await bot.reply_to(
+        message, 
+        "Введите номер подгруппы:"
         )
 
 async def backCommand(message, additional_message: str = ""):
@@ -362,7 +393,7 @@ async def backCommand(message, additional_message: str = ""):
     
     # Edit the message with the new text and reply markup
     await bot.edit_message_text(
-        text=  reply_message, 
+        text = reply_message, 
         chat_id = message.chat.id, 
         message_id = message.message_id, 
         reply_markup = markup
@@ -398,12 +429,18 @@ async def startCommand(message):
         "Профиль": {'callback_data' : 'showProfile'},
     }, row_width=2)
     
+    if not isUserHasSubGroup(message.from_user.id):
+        markup = quick_markup({
+            "Установить подгруппу": {'callback_data' : 'configureSubGroup'},
+        }, row_width=1)
+        reply_message = "Привет, я бот для просмотра расписания МГТУ. У тебя не установленна подгруппа, друг.\n"
+    
     # If the user is not in the database, show the "Set group" button
     if not isUserKnown(message.from_user.id):
         markup = quick_markup({
             "Установить группу": {'callback_data' : 'configureGroup'},
         }, row_width=1)
-    
+        
     # Register the buttonsCallback function as a callback query handler
     bot.register_callback_query_handler(callback = buttonsCallback, func = callbackFilter)
     # Reply to the message with the main menu
