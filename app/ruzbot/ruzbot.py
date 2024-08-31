@@ -1,19 +1,14 @@
-import logging
 import os
-from datetime import datetime, timedelta
 
 from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
 import db
-from db import users
-from ruzbot import commands
-from ruzparser import RuzParser
+from ruzbot import markups
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 bot = AsyncTeleBot(BOT_TOKEN)
-parser = RuzParser()
 
 
 @bot.message_handler(commands=['start'])
@@ -30,21 +25,9 @@ async def startCommand(message):
         None
     """
     reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
-    reply_message += "Учитывайте что бот в бете."
     
     # Create a markup with buttons for the main menu
-    markup = quick_markup({
-        # Button to view the schedule for today
-        "Сегодня": {'callback_data' : 'parseDay 0'},
-        # Button to view the schedule for tomorrow
-        "Завтра": {'callback_data' : 'parseDay 1'},
-        # Button to view the schedule for this week
-        "Эта неделя": {'callback_data' : 'parseWeek 0'},
-        # Button to view the schedule for next week
-        "Следующая неделя": {'callback_data' : 'parseWeek 1'},
-        # Button to view the user's profile
-        "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=2)
+    markup = markups.start_markup
     
     if not db.isUserHasSubGroup(message.from_user.id):
         markup = quick_markup({
@@ -66,4 +49,5 @@ async def startCommand(message):
         reply_message, 
         reply_markup = markup)
 
-print(list(users.find()))
+
+print(list(db.users.find()))

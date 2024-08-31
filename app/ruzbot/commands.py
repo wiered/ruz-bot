@@ -4,6 +4,7 @@ from telebot.util import quick_markup
 
 import db
 from ruzparser import RuzParser
+from ruzbot import markups
 from utils import formatters
 
 async def dateCommand(bot, message, _timedelta):
@@ -242,19 +243,7 @@ async def backCommand(bot, message, additional_message: str = ""):
     #   today, tomorrow, this week, next week, or to view the user's profile
     reply_message = additional_message
     reply_message += "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
-    reply_message += "Учитывайте что бот в бете."
-    markup = quick_markup({
-        # Button to view the schedule for today
-        "Сегодня": {'callback_data' : 'parseDay 0'},
-        # Button to view the schedule for tomorrow
-        "Завтра": {'callback_data' : 'parseDay 1'},
-        # Button to view the schedule for this week
-        "Эта неделя": {'callback_data' : 'parseWeek 0'},
-        # Button to view the schedule for next week
-        "Следующая неделя": {'callback_data' : 'parseWeek 1'},
-        # Button to view the user's profile
-        "Профиль": {'callback_data' : 'showProfile'},
-    }, row_width=2)
+    markup = markups.start_markup
     
     # Get user id from mesage
     user_id = message.reply_to_message.from_user.id
