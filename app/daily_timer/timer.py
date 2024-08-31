@@ -32,7 +32,7 @@ async def parseMonthlyScheduleForGroups():
         if (datetime.now() - last_updated).total_seconds() < 3600:
             return
         
-        lessons_for_group = await parser.parseThisMonth(group)
+        lessons_for_group = await parser.parseSchedule(group)
         print(type(lessons_for_group))
         saveMonthLessonsToDB(group, lessons_for_group)
             

@@ -92,7 +92,7 @@ class RuzParser:
         logging.info(f'parsing week {start} - {end}')
         return await self.parse(group, start, end)
     
-    async def parseThisMonth(self, group: str) -> List[dict]:
+    async def parseSchedule(self, group: str) -> List[dict]:
         """
         Parse schedule for group for one month
         
@@ -104,13 +104,18 @@ class RuzParser:
         """
         logging.info(f'parsing this month for group {group}')
         
-        first_day_of_month = datetime.today().replace(day=1)
-        last_day_of_month = first_day_of_month + timedelta(
-            days=calendar.monthrange(first_day_of_month.year, first_day_of_month.month)[1] - 1
-            )
+        first_date_of_this_month = datetime.today().replace(day=1)
+        first_date_of_previous_month = (first_date_of_this_month - timedelta(days=2)).replace(day=1)
         
-        start = first_day_of_month.strftime('%Y.%m.%d')
-        end = last_day_of_month.strftime('%Y.%m.%d')
+        last_day_of_this_month: int = calendar.monthrange(first_date_of_this_month.year, first_date_of_this_month.month)[1]
+        last_date_of_this_month: datetime = first_date_of_this_month + timedelta(days = last_day_of_this_month - 1)
+        
+        first_date_of_next_month: datetime = (last_date_of_this_month + timedelta(days=2)).replace(day=1)
+        last_day_of_next_month: int = calendar.monthrange(first_date_of_next_month.year, first_date_of_next_month.month)[1]
+        last_date_of_next_month: datetime = first_date_of_next_month + timedelta(days = last_day_of_next_month - 1)
+        
+        start = first_date_of_previous_month.strftime('%Y.%m.%d')
+        end = last_date_of_next_month.strftime('%Y.%m.%d')
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
         for lesson in lessons_for_this_month:
