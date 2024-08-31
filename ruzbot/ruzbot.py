@@ -38,7 +38,9 @@ async def setGroup(callback, group_id, group_name) -> str:
     
     # If the user is not already in the database, add them
     if not isUserKnown(user_id):
-        logging.info("Adding user into database: {} - {}".format(user_id, group_name))
+        logging.info(
+            "Adding user into database: {} - {}".format(user_id, group_name)
+            )
         users.insert_one({
             "id": user_id,
             "group_id": group_id, 
@@ -47,7 +49,12 @@ async def setGroup(callback, group_id, group_name) -> str:
     else:
         logging.info("Updating user in database: {} - {}".format(user_id, group_name))
         # Else update user in database
-        users.update_one({"id": user_id}, {"$set": {"group_id": group_id, "group_name": group_name}})
+        users.update_one(
+                {"id": user_id}, 
+                {
+                    "$set": {"group_id": group_id, "group_name": group_name}
+                }
+            )
         
     # Return a message confirming that the group has been set
     return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
@@ -131,7 +138,10 @@ async def textCallback(callback):
                 return
 
             markup = quick_markup({
-                group.get("label"): {"callback_data": f"setGroup {group.get('id')} {group.get('label')}"} for group in groups_list
+                group.get("label"): 
+                    {
+                        "callback_data": f"setGroup {group.get('id')} {group.get('label')}"
+                    } for group in groups_list
             }, row_width=1)
 
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
@@ -178,7 +188,13 @@ async def dateCommand(message, _timedelta):
         "След. день": {'callback_data' : 'parseDay {}'.format(_timedelta + 1)}
     }, row_width=3)
     
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup, parse_mode = 'MarkdownV2')
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup, 
+        parse_mode = 'MarkdownV2'
+        )
 
 async def weekCommand(message, _timedelta):
     """
@@ -209,7 +225,13 @@ async def weekCommand(message, _timedelta):
     }, row_width=3)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup, parse_mode = "MarkdownV2")
+    await bot.edit_message_text(
+        text = reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup, 
+        parse_mode = "MarkdownV2"
+        )
 
 async def setSubGroupCommand(message, num):
     pass
@@ -227,7 +249,10 @@ async def setGroupCommand(message):
     # Register the textCallback as a message handler
     bot.register_message_handler(callback = textCallback)
     # Reply to the message with a prompt to enter the group name
-    await bot.reply_to(message, "Введи имя группы полностью(например ИС221): ")
+    await bot.reply_to(
+        message, 
+        "Введи имя группы полностью(например ИС221): "
+        )
 
 async def sendProfileCommand(message):
     """
@@ -297,7 +322,12 @@ async def backCommand(message, additional_message: str = ""):
         }, row_width=1)
     
     # Edit the message with the new text and reply markup
-    await bot.edit_message_text(reply_message, message.chat.id, message.message_id, reply_markup = markup)
+    await bot.edit_message_text(
+        text=  reply_message, 
+        chat_id = message.chat.id, 
+        message_id = message.message_id, 
+        reply_markup = markup
+        )
 
 @bot.message_handler(commands=['start'])
 async def startCommand(message):
@@ -333,7 +363,9 @@ async def startCommand(message):
     # Register the buttonsCallback function as a callback query handler
     bot.register_callback_query_handler(callback = buttonsCallback, func = callbackFilter)
     # Reply to the message with the main menu
-    await bot.reply_to(message, """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?
-Учитывайте что бот в бете.""", reply_markup = markup)
+    await bot.reply_to(
+        message, 
+        """Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\nУчитывайте что бот в бете.""", 
+        reply_markup = markup)
 
 print(list(users.find()))
