@@ -10,7 +10,7 @@ import requests
 import db
 
 GROUP_URL = "https://ruz.mstuca.ru/api/search?term={}&type=group"
-LESSIONS_URL = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
+LESSONS_URL = "https://ruz.mstuca.ru/api/schedule/group/{}?start={}&finish={}&lng=1"
 
 
 class RuzParser:
@@ -48,7 +48,7 @@ class RuzParser:
         """
         logging.info(f"Running parse for {group} from {start_date} to {end_date}")
         async with aiohttp.ClientSession() as session:
-            json: dict = await self.fetch(session, LESSIONS_URL.format(group, start_date, end_date))
+            json: dict = await self.fetch(session, LESSONS_URL.format(group, start_date, end_date))
         
         return json
     
@@ -119,7 +119,7 @@ class RuzParser:
         
         lessons_for_this_month: List[dict] = await self.parse(group, start, end)
         for lesson in lessons_for_this_month:
-            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d") + timedelta(minutes=1)
+            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d")
             lesson.update({"date": date})
             
         if len(lessons_for_this_month) < 1:
