@@ -44,6 +44,7 @@ async def isParsingTime() -> None:
     """
     hour = int(datetime.today().strftime('%H'))
     if hour == 12 or hour == 6:
+        logging.info(f"parsing Monthly Schedule For Groups, {hour = }")
         await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups() -> None:
@@ -78,6 +79,7 @@ async def timerPooling() -> None:
     The loop can be stopped with Ctrl+C.
     """
     polling = True
+    logging.info("Timer started")
     try:
         while polling:
             # Create a new Timer that calls isParsingTime after 60 seconds

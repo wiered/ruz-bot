@@ -34,6 +34,7 @@ class RuzParser:
             # Get the JSON data from the response
             return await resp.json(encoding="Windows-1251")
     
+    
     async def parse(self, group: str, start_date: str, end_date: str) -> dict:
         """
         Parse schedule for group from start_date to end_date

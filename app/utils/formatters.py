@@ -6,7 +6,7 @@ LESSON_NUMBER_DICT = {
     "12:40": 3,
     "14:20": 4,
     "16:00": 5,
-    "17:40": 6
+    "18:00": 6
 }
 
 WEEK_DAYS_LABEL_DICT = {

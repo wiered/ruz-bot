@@ -38,3 +38,12 @@ def getRandomGroup() -> str:
         str: A random group name.
     """
     return random.choice(RANDOM_GROUP_NAMES)
+
+def isSubGroupValid(lesson, sub_group):
+    if len(list_sub_groups := lesson.get("listSubGroups")) == 0:
+        return True
+    if sub_group == int(list_sub_groups[0].get("subgroup")[-1]):
+        return True
+    
+    return False
+

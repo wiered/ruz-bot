@@ -4,107 +4,12 @@ from datetime import datetime, timedelta, date, time
 from typing import List
 from pymongo import MongoClient
 
+import utils
+
 client = MongoClient(os.environ.get('MONGODB_ADRESS'), connect=True)
 db = client.ruzbotdb
 users = db.users
 lessons = db.lessons
-
-def getStartEndOfDay(target_date: date) -> tuple:
-    """
-    Returns the start and end of the day relative to the given target date.
-
-    Args:
-        target_date (date): The target date
-
-    Returns:
-        tuple: A tuple containing the start and end of the day
-    """
-    # Get the start of the day
-    start_of_day = datetime.combine(target_date, time.min)
-    
-    # Get the end of the day
-    end_of_day = datetime.combine(target_date, time.max)
-    
-    # Return the start and end of the day
-    return start_of_day, end_of_day
-
-
-def getStartAndEndOfWeek(reference_date: datetime) -> tuple:
-    """
-    Returns the start and end of the week relative to the given reference date.
-
-    Args:
-        reference_date (datetime): The reference date
-
-    Returns:
-        tuple: A tuple containing the start and end of the week
-    """
-    # Start of the week (Monday)
-    start_of_week = reference_date - timedelta(days=reference_date.weekday())
-    # End of the week (Sunday)
-    _, end_of_week = getStartEndOfDay(start_of_week + timedelta(days=5))
-    
-    # Get the start of the day of the first day of the week
-    start_of_week, _ = getStartEndOfDay(start_of_week)
-    return start_of_week, end_of_week
-
-
-def getPreviousAndNextMonthBounds(reference_date: datetime):
-    """
-    Returns the start of the previous month and the end of the next month
-    relative to the given reference date.
-
-    Args:
-        reference_date (datetime): The reference date
-
-    Returns:
-        tuple: A tuple containing the start of the previous month and the end of the next month
-    """
-    # Step 1: Start of the previous month
-    first_day_of_current_month = reference_date.replace(day=1)
-    start_of_previous_month = first_day_of_current_month - timedelta(days=1)
-    # Get the start of the day of the first day of the previous month
-    start_of_previous_month, _ = getStartEndOfDay(start_of_previous_month.replace(day=1))
-
-    # Step 2: End of the next month
-    first_day_of_next_next_month = (first_day_of_current_month + timedelta(days=31)).replace(day=1)
-    end_of_next_month = (first_day_of_next_next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-    # Get the end of the day of the last day of the next month
-    _, end_of_next_month = getStartEndOfDay(end_of_next_month)
-
-    return start_of_previous_month, end_of_next_month
-
-
-def saveMonthLessonsToDB(group_id: str, lessons_for_this_month: List[dict]):
-    """
-    Save the lessons for the given group to the database
-    
-    Args:
-        group_id (str): The id of the group
-        lessons_for_this_month (List[dict]): The lessons for the given group
-    """
-    # If the group is already cached, delete the old entry
-    if lessons.count_documents({"group_id": group_id}) > 0:
-        lessons.delete_one({"group_id": group_id})
-    
-    # Insert the new entry into the database
-    lessons.insert_one({
-        "group_id": group_id,
-        "last_update": datetime.now(),
-        "lessons": lessons_for_this_month
-    })
-    
-        
-def getAllGroupsList() -> List[str]:
-    """
-    Get a list of all the groups cached in the database
-    
-    Returns:
-        List[str]: A list of group ids
-    """
-    # Get all the groups from the users collection
-    return users.distinct("group_id")
-
 
 def isGroupChached(group_id: str) -> bool:
     """
@@ -142,7 +47,7 @@ def isDayChached(group_id, date: datetime) -> bool:
     
     # Get the bounds of the previous and next month
     reference_date = datetime.now()
-    start_of_previous_month, end_of_next_month = getPreviousAndNextMonthBounds(reference_date)
+    start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
     
     # Check if the date is before the start of the previous month
     if (date - start_of_previous_month).total_seconds() < 0:
@@ -157,7 +62,8 @@ def isDayChached(group_id, date: datetime) -> bool:
     # If the date is between the start of the previous month and the end of the next month
     # and the group is cached, then the day is cached
     return True
-    
+
+
 def isWeekChached(group_id, date):
     """
     Check if the week is cached in the database
@@ -169,13 +75,13 @@ def isWeekChached(group_id, date):
     Returns:
         bool: True if the week is cached in the database, otherwise False
     """
-    start, end = getStartAndEndOfWeek(date)
+    start, end = utils.getStartAndEndOfWeek(date)
     if not isGroupChached(group_id):
         # If the group is not cached, the week is not cached
         return False
     
     reference_date = datetime.now()
-    start_of_previous_month, end_of_next_month = getPreviousAndNextMonthBounds(reference_date)
+    start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
     
     # Check if the week is before the start of the previous month
     if (start - start_of_previous_month).total_seconds() < 0:
@@ -192,18 +98,68 @@ def isWeekChached(group_id, date):
     return True
 
 
-def getDay(group_id, date: datetime) -> List[dict]:
+def isUserKnown(user_id):
+    if users.find_one({"id":user_id}):
+        return True
+    return False
+
+
+def isUserHasSubGroup(user_id: int) -> bool:
+    if users.find_one(
+        {"id":547334624, "sub_group": {"$exists": False}}
+        ):
+        return False
+    
+    return True
+
+
+def saveMonthLessonsToDB(group_id: str, lessons_for_this_month: List[dict]):
+    """
+    Save the lessons for the given group to the database
+    
+    Args:
+        group_id (str): The id of the group
+        lessons_for_this_month (List[dict]): The lessons for the given group
+    """
+    # If the group is already cached, delete the old entry
+    if lessons.count_documents({"group_id": group_id}) > 0:
+        lessons.delete_one({"group_id": group_id})
+    
+    # Insert the new entry into the database
+    lessons.insert_one({
+        "group_id": group_id,
+        "last_update": datetime.now(),
+        "lessons": lessons_for_this_month
+    })
+    
+        
+def getAllGroupsList() -> List[str]:
+    """
+    Get a list of all the groups cached in the database
+    
+    Returns:
+        List[str]: A list of group ids
+    """
+    # Get all the groups from the users collection
+    return users.distinct("group_id")
+
+
+def getDay(user_id, date: datetime) -> List[dict]:
     """
     Get all lessons for one day for given group and date
     
     Args:
-        group_id (str): Group id
+        user_id (str): Telegram user id
         date (datetime): Date
     
     Returns:
         List[dict]: Lessons in JSON format
     """
-    date, _ = getStartEndOfDay(date)
+    date, _ = utils.getStartEndOfDay(date)
+    
+    user = users.find_one({"id": user_id})
+    group_id = user.get("group_id")
+    sub_group = user.get("sub_group")
     
     # Check if the day is cached
     if not isDayChached(group_id, date):
@@ -225,23 +181,28 @@ def getDay(group_id, date: datetime) -> List[dict]:
             break
         # If the lesson is on the given day, add it to the list
         else:
-            day_lessons.append(lesson)
+            if utils.isSubGroupValid(lesson, sub_group):
+                day_lessons.append(lesson)
             
     return day_lessons   
 
 
-def getWeek(group_id, date: datetime):
+def getWeek(user_id, date: datetime):
     """
     Get all lessons for a week for given group and date
     
     Args:
-        group_id (str): Group id
+        user_id (str): Telegram user id
         date (datetime): Date
     
     Returns:
         List[dict]: List of lessons in JSON format
     """
-    start, end = getStartAndEndOfWeek(date)
+    start, end = utils.getStartAndEndOfWeek(date)
+    
+    user = users.find_one({"id": user_id})
+    group_id = user.get("group_id")
+    sub_group = user.get("sub_group")
     
     # Check if the week is cached
     if not isWeekChached(group_id, date):
@@ -263,6 +224,10 @@ def getWeek(group_id, date: datetime):
             break
         # If the lesson is in the given week, add it to the list
         else:
-            week_lessons.append(lesson)
+            if utils.isSubGroupValid(lesson, sub_group):
+                week_lessons.append(lesson)
             
     return week_lessons
+
+
+

@@ -1,9 +1,11 @@
 import asyncio
+import os
 
 import db
 import ruzparser
 from ruzbot import bot
 from daily_timer import timerPooling
+from ruzbot.handlers import register_handlers
 
 async def updateLessonsSchedulesChache() -> None:
     """
@@ -13,9 +15,12 @@ async def updateLessonsSchedulesChache() -> None:
     
     :return: None
     """
+    
+    if bool(os.environ.get('DOUPDATE')):
+        return
+        
     # Get all groups from the database
     groups = db.getAllGroupsList()
-    print(groups)
     
     # Get parser
     parser = ruzparser.RuzParser()
@@ -31,6 +36,9 @@ async def updateLessonsSchedulesChache() -> None:
         await asyncio.sleep(20)
 
 async def startBot():
+    # Register the textCallback as a message handler
+    register_handlers(bot)
+    
     await bot.polling()
     
 async def startTimer():
