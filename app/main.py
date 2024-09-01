@@ -16,12 +16,11 @@ async def updateLessonsSchedulesChache() -> None:
     :return: None
     """
     
-    if not bool(os.environ.get('DOUPDATE')):
+    if bool(os.environ.get('DOUPDATE')):
         return
         
     # Get all groups from the database
     groups = db.getAllGroupsList()
-    print(groups)
     
     # Get parser
     parser = ruzparser.RuzParser()
