@@ -44,7 +44,7 @@ async def isParsingTime() -> None:
     """
     hour = int(datetime.today().strftime('%H'))
     print(f"{hour = }, {type(hour) = }")
-    print(f"{hour == 20 = }")
+    print(f"{hour == 21 = }")
     if hour == 21 or hour == 20:
         logging.info(f"parsing Monthly Schedule For Groups, {hour = }")
         print("parsing Monthly Schedule For Groups, ")
