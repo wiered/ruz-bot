@@ -148,8 +148,8 @@ async def setSubGroupCommand(bot, message):
     """
     
     # Reply to the message with a prompt to enter the group name
-    reply_message: str = "Введите номер подгруппы(одно число, если номер вашей подгруппы не одно число..."
-    reply_message += "\nЭм, всё равно введите введите его, я потом посмотрю по логам чё по чём.):"
+    reply_message: str = "Введите номер подгруппы. Номером подгруппы должно быть одно число."
+    reply_message += "\nЕсли ваш номер подргуппы не является числом, то введите 0."
     await bot.reply_to(
         message, 
         reply_message
