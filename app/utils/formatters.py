@@ -146,11 +146,10 @@ def formatWeekMessage(data):
     for key in dates.keys():
         lessons += dates.get(key) + "\n"
     
-    escapedMessage = escapeMessage(lessons)
-    if len (escapedMessage) > 3500:
-        escapedMessage = f"Message too long to send\n\n" + escapedMessage[:3000]
-    return escapedMessage
-
+    if len(lessons) > 4000:
+        lessons = "Message too long\n\n"
+    
+    return escapeMessage(lessons)
 
 def parseKindOfWork(kind_of_work):
     """
