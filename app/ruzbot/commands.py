@@ -24,6 +24,8 @@ async def dateCommand(bot, message, _timedelta):
     logging.info('Running date command {}'.format(_timedelta))
     # get user id from message
     user_id = message.reply_to_message.from_user.id
+    if not db.isUserHasSubGroup(user_id):
+        await backCommand(bot, message)
     # get user's group id from database
     user = db.users.find_one({"id":user_id})
     group_id = user.get("group_id")
@@ -70,6 +72,10 @@ async def weekCommand(bot, message, _timedelta):
     """
     logging.info('Running week command {}'.format(_timedelta))
     user_id = message.reply_to_message.from_user.id
+    
+    if not db.isUserHasSubGroup(user_id):
+        await backCommand(bot, message)
+        
     # Get the user's group id from database
     group_id = db.users.find_one({"id":user_id}).get("group_id")
     
@@ -161,6 +167,8 @@ async def sendProfileCommand(bot, message):
     
     # Get user id from message
     user_id = message.reply_to_message.from_user.id
+    if not db.isUserHasSubGroup(user_id):
+        await backCommand(bot, message)
     # Get user from database
     user = db.users.find_one({"id": user_id})
     # Get user's group id and name
