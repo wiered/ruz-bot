@@ -42,7 +42,7 @@ def getRandomGroup() -> str:
 def isSubGroupValid(lesson, sub_group):
     if len(list_sub_groups := lesson.get("listSubGroups")) == 0:
         return True
-    if sub_group == int(list_sub_groups[0].get("subgroup")[-1]):
+    if sub_group == int(list_sub_groups[0].get("subgroup")[-1]) or sub_group == 0:
         return True
     
     return False

@@ -26,6 +26,7 @@ async def dateCommand(bot, message, _timedelta):
     user_id = message.reply_to_message.from_user.id
     if not db.isUserHasSubGroup(user_id):
         await backCommand(bot, message)
+        return
     # get user's group id from database
     user = db.users.find_one({"id":user_id})
     group_id = user.get("group_id")
@@ -75,6 +76,7 @@ async def weekCommand(bot, message, _timedelta):
     
     if not db.isUserHasSubGroup(user_id):
         await backCommand(bot, message)
+        return
         
     # Get the user's group id from database
     group_id = db.users.find_one({"id":user_id}).get("group_id")
@@ -146,8 +148,8 @@ async def setSubGroupCommand(bot, message):
     """
     
     # Reply to the message with a prompt to enter the group name
-    reply_message: str = "Введите номер подгруппы(одно число, если номер вашей подгруппы не одно число..."
-    reply_message += "\nЭм, всё равно введите введите его, я потом посмотрю по логам чё по чём.):"
+    reply_message: str = "Введите номер подгруппы. Номером подгруппы должно быть одно число."
+    reply_message += "\nЕсли ваш номер подргуппы не является числом, то введите 0."
     await bot.reply_to(
         message, 
         reply_message
