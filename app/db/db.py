@@ -212,10 +212,11 @@ def getWeek(user_id, date: datetime):
     week_lessons = []
     
     # Get all lessons for the group
-    group_lessons = lessons.find_one({"group_id": group_id}).get("lessons")
+    group_lessons = lessons.find_one({"group_id": group_id})
+    last_update = group_lessons.get("last_update").strftime("%d.%m %H:%M:%S")
     
     # Iterate over all lessons and select only those that are in the given week
-    for lesson in group_lessons:
+    for lesson in group_lessons.get("lessons"):
         # Check if the lesson is before the start of the week
         if (start - lesson.get("date")).total_seconds() > 0:
             pass
@@ -227,7 +228,7 @@ def getWeek(user_id, date: datetime):
             if utils.isSubGroupValid(lesson, sub_group):
                 week_lessons.append(lesson)
             
-    return week_lessons
+    return week_lessons, last_update
 
 
 

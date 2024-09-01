@@ -80,14 +80,15 @@ async def weekCommand(bot, message, _timedelta):
     # check if week is chached or not
     if db.isWeekChached(group_id, date):
         # if yes get data from db
-        data = db.getWeek(user_id, date)
+        data, last_update = db.getWeek(user_id, date)
     else:
         parser = RuzParser()
         # if not, then parse it from site
+        last_update = datetime.now().strftime("%d.%m %H:%M:%S")
         data = await parser.parseWeek(group_id, date)
     
     # Get the formatted schedule for the week
-    reply_message = formatters.formatWeekMessage(data)
+    reply_message = formatters.formatWeekMessage(data) + formatters.escapeMessage(f"Последнее обновление: {last_update}")
     # Create a markup with buttons for the previous week, 
     #   next week and going back to the start
     markup = quick_markup({
@@ -269,4 +270,3 @@ async def backCommand(bot, message, additional_message: str = ""):
         message_id = message.message_id, 
         reply_markup = markup
         )
-    
