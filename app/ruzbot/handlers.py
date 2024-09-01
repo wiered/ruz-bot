@@ -55,7 +55,7 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             
             await commands.sendProfileCommand(bot, message)
         case _:
-            logging.warn("Wrong case")
+            logging.warn(f"Wrong case: {callback.text}")
 
 
 async def buttonsCallback(callback, bot: AsyncTeleBot):
