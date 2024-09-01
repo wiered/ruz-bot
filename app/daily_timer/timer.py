@@ -61,11 +61,16 @@ async def parseMonthlyScheduleForGroups() -> None:
     for group in getAllGroupsList():
         print(f"{group = }")
         # Get the last update time from the database
-        last_updated = lessons.find_one({"group_id": group}).get("last_update")
-        last_updated_human = datetime.strftime(last_updated, "%d.%m %H:%M:%S")
-        total_seconds = (datetime.now() - last_updated).total_seconds()
-        print(f"{last_updated_human = }")
-        print(f"{total_seconds = }, {type(total_seconds) = }")
+        lesson = lessons.find_one({"group_id": group})
+        
+        if lesson: 
+            last_updated = lesson.get("last_update")
+            last_updated_human = datetime.strftime(last_updated, "%d.%m %H:%M:%S")
+            total_seconds = (datetime.now() - last_updated).total_seconds()
+            print(f"{last_updated_human = }")
+            print(f"{total_seconds = }, {type(total_seconds) = }")
+        else:
+            total_seconds = 36000
         
         # If the last update was more than an hour ago, update the database
         if total_seconds > 3600:
