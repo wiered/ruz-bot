@@ -43,8 +43,11 @@ async def isParsingTime() -> None:
     If it is, run the parseMonthlyScheduleForGroups function to update the database.
     """
     hour = int(datetime.today().strftime('%H'))
-    if hour == 12 or hour == 6:
+    print(f"{hour = }, {type(hour) = }")
+    print(f"{hour == 20 = }")
+    if hour == 21 or hour == 20:
         logging.info(f"parsing Monthly Schedule For Groups, {hour = }")
+        print("parsing Monthly Schedule For Groups, ")
         await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups() -> None:
@@ -56,12 +59,19 @@ async def parseMonthlyScheduleForGroups() -> None:
             
     parser = RuzParser()
     for group in getAllGroupsList():
+        print(f"{group = }")
         # Get the last update time from the database
         last_updated = lessons.find_one({"group_id": group}).get("last_update")
+        last_updated_human = datetime.strftime(last_updated, "%d.%m %H:%M:%S")
+        total_seconds = (datetime.now() - last_updated).total_seconds()
+        print(f"{last_updated_human = }")
+        print(f"{total_seconds = }, {type(total_seconds) = }")
+        
         # If the last update was more than an hour ago, update the database
-        if (datetime.now() - last_updated).total_seconds() > 3600:
+        if total_seconds > 3600:
             # Parse the schedule for the group
             lessons_for_group = await parser.parseSchedule(group)
+            print(f"{len(lessons_for_group) = }")
             # Save the data to the database
             saveMonthLessonsToDB(group, lessons_for_group)
             # Wait a bit before parsing the next group
@@ -83,7 +93,7 @@ async def timerPooling() -> None:
     try:
         while polling:
             # Create a new Timer that calls isParsingTime after 60 seconds
-            timer = Timer(60, isParsingTime)
+            timer = Timer(5, isParsingTime)
             # Wait 60 seconds before creating the next Timer
             await asyncio.sleep(60)
     except KeyboardInterrupt:
