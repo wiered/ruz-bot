@@ -62,8 +62,8 @@ def isDayChached(group_id, date: datetime) -> bool:
     # If the date is between the start of the previous month and the end of the next month
     # and the group is cached, then the day is cached
     return True
-    
-    
+
+
 def isWeekChached(group_id, date):
     """
     Check if the week is cached in the database
@@ -144,18 +144,22 @@ def getAllGroupsList() -> List[str]:
     return users.distinct("group_id")
 
 
-def getDay(group_id, date: datetime) -> List[dict]:
+def getDay(user_id, date: datetime) -> List[dict]:
     """
     Get all lessons for one day for given group and date
     
     Args:
-        group_id (str): Group id
+        user_id (str): Telegram user id
         date (datetime): Date
     
     Returns:
         List[dict]: Lessons in JSON format
     """
     date, _ = utils.getStartEndOfDay(date)
+    
+    user = users.find_one({"id": user_id})
+    group_id = user.get("group_id")
+    sub_group = user.get("sub_group")
     
     # Check if the day is cached
     if not isDayChached(group_id, date):
@@ -177,23 +181,28 @@ def getDay(group_id, date: datetime) -> List[dict]:
             break
         # If the lesson is on the given day, add it to the list
         else:
-            day_lessons.append(lesson)
+            if utils.isSubGroupValid(lesson, sub_group):
+                day_lessons.append(lesson)
             
     return day_lessons   
 
 
-def getWeek(group_id, date: datetime):
+def getWeek(user_id, date: datetime):
     """
     Get all lessons for a week for given group and date
     
     Args:
-        group_id (str): Group id
+        user_id (str): Telegram user id
         date (datetime): Date
     
     Returns:
         List[dict]: List of lessons in JSON format
     """
     start, end = utils.getStartAndEndOfWeek(date)
+    
+    user = users.find_one({"id": user_id})
+    group_id = user.get("group_id")
+    sub_group = user.get("sub_group")
     
     # Check if the week is cached
     if not isWeekChached(group_id, date):
@@ -215,7 +224,8 @@ def getWeek(group_id, date: datetime):
             break
         # If the lesson is in the given week, add it to the list
         else:
-            week_lessons.append(lesson)
+            if utils.isSubGroupValid(lesson, sub_group):
+                week_lessons.append(lesson)
             
     return week_lessons
 

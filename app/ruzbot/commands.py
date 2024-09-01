@@ -25,7 +25,8 @@ async def dateCommand(bot, message, _timedelta):
     # get user id from message
     user_id = message.reply_to_message.from_user.id
     # get user's group id from database
-    group_id = db.users.find_one({"id":user_id}).get("group_id")
+    user = db.users.find_one({"id":user_id})
+    group_id = user.get("group_id")
     
     # get date
     _timedelta = int(_timedelta)
@@ -33,7 +34,7 @@ async def dateCommand(bot, message, _timedelta):
     
     if db.isDayChached(group_id, date):
         # get data from db
-        data = db.getDay(group_id, date)
+        data = db.getDay(user_id, date)
     else:
         # parse the schedule for the specified date
         parser = RuzParser()
@@ -79,7 +80,7 @@ async def weekCommand(bot, message, _timedelta):
     # check if week is chached or not
     if db.isWeekChached(group_id, date):
         # if yes get data from db
-        data = db.getWeek(group_id, date)
+        data = db.getWeek(user_id, date)
     else:
         parser = RuzParser()
         # if not, then parse it from site

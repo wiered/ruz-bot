@@ -50,10 +50,9 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
         case (1, ):
             sub_group_number = int(callback.text)
             users.update_one({"id": callback.from_user.id}, {"$set": {"sub_group": sub_group_number}})
-            message = await bot.reply_to(callback, "Ваша подгруппа установлена!")
+            message = await bot.reply_to(callback, "Ваша группа и подгруппа установлены!")
             
-            additional_message = "Ваша подгруппа установлена: {}!\n\n".format(callback.text)
-            await commands.backCommand(bot, message, additional_message)
+            await commands.sendProfileCommand(bot, message)
         case _:
             logging.warn("Wrong case")
 
@@ -97,6 +96,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             # Call the set group command with the reply to message from the callback query
             await commands.setGroupCommand(bot, callback.message.reply_to_message)
             
+        # If the callback query is for the configure sub group button    
         case ['configureSubGroup']:
             # Call the send profile command with the callback query message
             await commands.setSubGroupCommand(bot, callback.message)
@@ -109,7 +109,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
                 # Call the set group command with the callback query and the arguments
                 additional_message = await commands.setGroup(bot, callback, group, args[1])
                 # Call the back command with the additional message
-                await commands.backCommand(bot, callback.message, additional_message)
+                await commands.setSubGroupCommand(bot, callback.message)
             except ValueError:
                 # If the conversion to an integer fails, return
                 return
