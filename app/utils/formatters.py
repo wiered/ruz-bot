@@ -63,6 +63,7 @@ def formatDay(lesson):
     
     return lessons
 
+
 def escapeMessage(message):
     """
     Escape special characters in a string so that they won't break the Markdown formatting.
@@ -83,6 +84,7 @@ def escapeMessage(message):
         message = message.replace(ch, f"\\{ch}")  
         
     return message
+
 
 def formatDayMessage(data, _timedelta = 0):
     """
@@ -107,7 +109,8 @@ def formatDayMessage(data, _timedelta = 0):
         lessons += formatDay(lesson)
     
     return escapeMessage(f"= {week_day} ({date}) = \n{lessons}")
-    
+
+
 def formatWeekMessage(data):
     """
     Format message for group for one week
@@ -144,7 +147,8 @@ def formatWeekMessage(data):
         lessons += dates.get(key) + "\n"
     
     return escapeMessage(lessons)
-    
+
+
 def parseKindOfWork(kind_of_work):
     """
     Parse kind of work

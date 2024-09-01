@@ -23,6 +23,7 @@ async def callbackFilter(call) -> bool:
     """
     return True
 
+
 async def textCallbackHandler(callback, bot: AsyncTeleBot):
     match tuple(i for i, pattern in enumerate([
                                             r"\w+\d+",
@@ -55,6 +56,7 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             await commands.sendProfileCommand(bot, message)
         case _:
             logging.warn("Wrong case")
+
 
 async def buttonsCallback(callback, bot: AsyncTeleBot):
     """
@@ -118,6 +120,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
         case _:
             # Print a message indicating that the callback query is not supported
             logging.warn("Wrong comand")
+
 
 def register_handlers(bot: AsyncTeleBot):
     bot.register_message_handler(textCallbackHandler, pass_bot=True)
