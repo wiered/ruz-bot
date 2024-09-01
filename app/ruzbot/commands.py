@@ -249,6 +249,12 @@ async def backCommand(bot, message, additional_message: str = ""):
     # Get user id from mesage
     user_id = message.reply_to_message.from_user.id
     
+    if not db.isUserHasSubGroup(message.from_user.id):
+        markup = quick_markup({
+            "Установить подгруппу": {'callback_data' : 'configureSubGroup'},
+        }, row_width=1)
+        reply_message = "Привет, я бот для просмотра расписания МГТУ. У тебя не установленна подгруппа, друг.\n"
+    
     # Check if user not in the database
     if not db.isUserKnown(user_id):
         # If the user is not in the database, show the "Set group" button
