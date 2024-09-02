@@ -122,8 +122,7 @@ def saveMonthLessonsToDB(group_id: str, lessons_for_this_month: List[dict]):
         lessons_for_this_month (List[dict]): The lessons for the given group
     """
     # If the group is already cached, delete the old entry
-    if lessons.count_documents({"group_id": group_id}) > 0:
-        lessons.delete_one({"group_id": group_id})
+    deleteMonthFromDB(group_id)
     
     # Insert the new entry into the database
     lessons.insert_one({
@@ -131,7 +130,12 @@ def saveMonthLessonsToDB(group_id: str, lessons_for_this_month: List[dict]):
         "last_update": datetime.now(),
         "lessons": lessons_for_this_month
     })
+
+def deleteMonthFromDB(group_id: str):
+    if lessons.count_documents({"group_id": group_id}) > 0:
+        lessons.delete_one({"group_id": group_id})
     
+
         
 def getAllGroupsList() -> List[str]:
     """
