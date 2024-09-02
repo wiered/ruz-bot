@@ -27,9 +27,10 @@ async def callbackFilter(call) -> bool:
 async def textCallbackHandler(callback, bot: AsyncTeleBot):
     match tuple(i for i, pattern in enumerate([
                                             r"\w+\d+",
+                                            r"\w+-\w+\d+",
                                             r"\d",
                                             ]) if re.match(pattern, callback.text)):
-        case (0,):
+        case (0,) | (1,):
             group_name = callback.text
             parser = RuzParser()
             groups_list = await parser.search_group(group_name)
@@ -48,7 +49,7 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             }, row_width=1)
 
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
-        case (1, ):
+        case (2,):
             sub_group_number = int(callback.text)
             users.update_one({"id": callback.from_user.id}, {"$set": {"sub_group": sub_group_number}})
             message = await bot.reply_to(callback, "Ваша группа и подгруппа установлены!")
