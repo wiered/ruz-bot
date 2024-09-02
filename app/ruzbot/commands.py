@@ -131,7 +131,7 @@ async def setGroupCommand(bot, message):
     # Reply to the message with a prompt to enter the group name
     await bot.reply_to(
         message, 
-        "Введи имя группы полностью(например ИС221): "
+        "Введи имя группы полностью(например ИС221 или МАГ-М241): "
         )
 
 
