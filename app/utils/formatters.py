@@ -76,7 +76,7 @@ def escapeMessage(message):
     """
     
     # List of special characters that must be escaped
-    replacables = ['.', '-', '(', ')', "=", "{", "}"]  
+    replacables = ['.', '-', '(', ')', "=", "{", "}", "!"]  
     
     # Iterate over each character in the list
     for ch in replacables:
