@@ -37,70 +37,70 @@ class Timer:
         """
         self._task.cancel()
 
-async def isParsingTime() -> None:
-    """
-    Check if the current time is 06:00 or 12:00.
-    If it is, run the parseMonthlyScheduleForGroups function to update the database.
-    """
-    hour = int(datetime.today().strftime('%H'))
-    if hour == 6 or hour == 12:
-        logging.info(f"parsing Monthly Schedule For Groups, {hour = }")
-        await parseMonthlyScheduleForGroups()
+    async def isParsingTime(self) -> None:
+        """
+        Check if the current time is 06:00 or 12:00.
+        If it is, run the parseMonthlyScheduleForGroups function to update the database.
+        """
+        hour = int(datetime.today().strftime('%H'))
+        if hour == 6 or hour == 12:
+            logging.info(f"parsing Monthly Schedule For Groups, {hour = }")
+            await self.parseMonthlyScheduleForGroups()
 
-async def parseMonthlyScheduleForGroups() -> None:
-    """
-    Parse the schedule for all groups and update the 
-        database if it's been more than an hour since the last update.
-    """
-    await asyncio.sleep(0.1)
+    async def parseMonthlyScheduleForGroups(self) -> None:
+        """
+        Parse the schedule for all groups and update the 
+            database if it's been more than an hour since the last update.
+        """
+        await asyncio.sleep(0.1)
+                
+        parser = RuzParser()
+        for group_id in db.getAllGroupsList():
+            if db.getUserCountByGroup(group_id) <= 3:
+                db.deleteScheduleFromDB(group_id)
+                continue
+            # Get the last update time from the database
+            lesson = db.getLessonsForGroup(group_id)
             
-    parser = RuzParser()
-    for group_id in db.getAllGroupsList():
-        if db.getUserCountByGroup(group_id) <= 3:
-            db.deleteScheduleFromDB(group_id)
-            continue
-        # Get the last update time from the database
-        lesson = db.getLessonsForGroup(group_id)
-        
-        if lesson: 
-            last_updated = lesson.get("last_update")
-            total_seconds = (datetime.now() - last_updated).total_seconds()
-        else:
-            total_seconds = 36000
-        
-        # If the last update was more than an hour ago, update the database
-        if total_seconds > 3600:
-            # Parse the schedule for the group
-            lessons_for_group = await parser.parseSchedule(group_id)          
-            # Save the data to the database
-            db.saveScheduleToDB(group_id, lessons_for_group)
-            # Wait a bit before parsing the next group
-            await asyncio.sleep(20)
+            if lesson: 
+                last_updated = lesson.get("last_update")
+                total_seconds = (datetime.now() - last_updated).total_seconds()
+            else:
+                total_seconds = 36000
             
-    return
-
-
-async def timerPooling() -> None:
-    """
-    Main function for the timer pool. 
-    It runs in an infinite loop and creates a new Timer every 60 seconds.
-    The Timer calls the isParsingTime function after 60 seconds.
-
-    The loop can be stopped with Ctrl+C.
-    """
-    polling = True
-    logging.info("Timer started")
-    try:
-        while polling:
-            # Create a new Timer that calls isParsingTime after 60 seconds
-            timer = Timer(600, isParsingTime)
-            # Wait 60 seconds before creating the next Timer
-            await asyncio.sleep(600)
-    except KeyboardInterrupt:
-        # If the user stops the program with Ctrl+C, exit the loop
+            # If the last update was more than an hour ago, update the database
+            if total_seconds > 3600:
+                # Parse the schedule for the group
+                lessons_for_group = await parser.parseSchedule(group_id)          
+                # Save the data to the database
+                db.saveScheduleToDB(group_id, lessons_for_group)
+                # Wait a bit before parsing the next group
+                await asyncio.sleep(20)
+                
         return
-    finally:
-        # Stop the loop and exit the function
-        polling = False
-        return
-    
+
+
+    async def timerPooling(self) -> None:
+        """
+        Main function for the timer pool. 
+        It runs in an infinite loop and creates a new Timer every 60 seconds.
+        The Timer calls the isParsingTime function after 60 seconds.
+
+        The loop can be stopped with Ctrl+C.
+        """
+        polling = True
+        logging.info("Timer started")
+        try:
+            while polling:
+                # Create a new Timer that calls isParsingTime after 60 seconds
+                timer = Timer(600, self.isParsingTime)
+                # Wait 60 seconds before creating the next Timer
+                await asyncio.sleep(600)
+        except KeyboardInterrupt:
+            # If the user stops the program with Ctrl+C, exit the loop
+            return
+        finally:
+            # Stop the loop and exit the function
+            polling = False
+            return
+        

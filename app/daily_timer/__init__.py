@@ -1,1 +1,1 @@
-from .timer import timerPooling
+from .timer import Timer
