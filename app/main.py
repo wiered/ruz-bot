@@ -43,7 +43,7 @@ async def startBot():
     
 async def startTimer():
     timer = Timer()
-    await timer.timerPooling()
+    await timer.pooling()
     
 async def main():
     """

@@ -80,7 +80,7 @@ class Timer:
         return
 
 
-    async def timerPooling(self) -> None:
+    async def pooling(self) -> None:
         """
         Main function for the timer pool. 
         It runs in an infinite loop and creates a new Timer every 60 seconds.
