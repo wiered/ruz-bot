@@ -3,7 +3,7 @@ import os
 from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
-import db
+from db import db
 from ruzbot import markups
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')

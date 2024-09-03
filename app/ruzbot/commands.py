@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import logging
 from telebot.util import quick_markup
 
-import db
+from db import db
 from ruzparser import RuzParser
 from ruzbot import markups
 from utils import formatters
@@ -28,14 +28,14 @@ async def dateCommand(bot, message, _timedelta):
         await backCommand(bot, message)
         return
     # get user's group id from database
-    user = db.users.find_one({"id":user_id})
+    user = db.getUser(user_id)
     group_id = user.get("group_id")
     
     # get date
     _timedelta = int(_timedelta)
     date = datetime.today() + timedelta(days=_timedelta)
     
-    if db.isDayChached(group_id, date):
+    if db.isDayInDB(group_id, date):
         # get data from db
         data = db.getDay(user_id, date)
     else:
@@ -79,14 +79,15 @@ async def weekCommand(bot, message, _timedelta):
         return
         
     # Get the user's group id from database
-    group_id = db.users.find_one({"id":user_id}).get("group_id")
+    user = db.getUser(user_id)
+    group_id = user.get("group_id")
     
     # get date
     _timedelta = int(_timedelta)
     date = datetime.today() + timedelta(weeks=_timedelta)
     
     # check if week is chached or not
-    if db.isWeekChached(group_id, date):
+    if db.isWeekInDB(group_id, date):
         # if yes get data from db
         data, last_update = db.getWeek(user_id, date)
     else:
@@ -173,8 +174,9 @@ async def sendProfileCommand(bot, message):
     user_id = message.reply_to_message.from_user.id
     if not db.isUserHasSubGroup(user_id):
         await backCommand(bot, message)
+    
     # Get user from database
-    user = db.users.find_one({"id": user_id})
+    user = db.getUser(user_id)
     # Get user's group id and name
     group_id = user.get("group_id")
     group_name = user.get("group_name")
@@ -219,23 +221,11 @@ async def setGroup(bot, callback, group_id, group_name) -> str:
         logging.info(
             "Adding user into database: {} - {}".format(user_id, group_name)
             )
-        db.users.insert_one({
-            "id": user_id,
-            "group_id": group_id, 
-            "group_name": group_name
-        })
+        db.addUser(user_id, group_id, group_name)
     else:
         logging.info("Updating user in database: {} - {}".format(user_id, group_name))
         # Else update user in database
-        db.users.update_one(
-                {"id": user_id}, 
-                {
-                    "$set": {"group_id": group_id, "group_name": group_name}
-                }
-            )
-        
-    # Return a message confirming that the group has been set
-    return "Группа установлена: {} - {}\n\n".format(group_id, group_name)
+        db.updateUser(user_id, group_id, group_name)
 
 
 async def backCommand(bot, message, additional_message: str = ""):

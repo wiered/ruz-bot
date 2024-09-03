@@ -2,8 +2,7 @@ import asyncio
 from datetime import datetime
 import logging
 
-import db
-from db import getAllGroupsList, saveMonthLessonsToDB, lessons
+from db import db
 from ruzparser import RuzParser
 
 class Timer:
@@ -56,12 +55,12 @@ async def parseMonthlyScheduleForGroups() -> None:
     await asyncio.sleep(0.1)
             
     parser = RuzParser()
-    for group_id in getAllGroupsList():
-        if db.users.count_documents({"group_id": group_id}) <= 3:
-            db.deleteMonthFromDB(group_id)
+    for group_id in db.getAllGroupsList():
+        if db.getUserCountByGroup(group_id) <= 3:
+            db.deleteScheduleFromDB(group_id)
             continue
         # Get the last update time from the database
-        lesson = lessons.find_one({"group_id": group_id})
+        lesson = db.getLessonsForGroup(group_id)
         
         if lesson: 
             last_updated = lesson.get("last_update")
@@ -74,7 +73,7 @@ async def parseMonthlyScheduleForGroups() -> None:
             # Parse the schedule for the group
             lessons_for_group = await parser.parseSchedule(group_id)          
             # Save the data to the database
-            saveMonthLessonsToDB(group_id, lessons_for_group)
+            db.saveScheduleToDB(group_id, lessons_for_group)
             # Wait a bit before parsing the next group
             await asyncio.sleep(20)
             
