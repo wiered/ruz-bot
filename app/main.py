@@ -4,7 +4,7 @@ import os
 import db
 import ruzparser
 from ruzbot import bot
-from daily_timer import Timer
+from daily_timer import timerPooling
 from ruzbot.handlers import register_handlers
 
 async def updateLessonsSchedulesChache() -> None:
@@ -42,8 +42,7 @@ async def startBot():
     await bot.polling()
     
 async def startTimer():
-    timer = Timer()
-    await timer.pooling()
+    await timerPooling()
     
 async def main():
     """
