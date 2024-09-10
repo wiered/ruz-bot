@@ -37,7 +37,7 @@ class DataBase():
     
     def isUserHasSubGroup(self, user_id: int) -> bool:
         if self.users.find_one(
-            {"id":547334624, "sub_group": {"$exists": False}}
+            {"id":user_id, "sub_group": {"$exists": False}}
             ):
             return False
         
