@@ -106,7 +106,7 @@ def isUserKnown(user_id):
 
 def isUserHasSubGroup(user_id: int) -> bool:
     if users.find_one(
-        {"id":547334624, "sub_group": {"$exists": False}}
+        {"id":user_id, "sub_group": {"$exists": False}}
         ):
         return False
     
