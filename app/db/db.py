@@ -36,11 +36,23 @@ class DataBase():
         return False
     
     def isUserHasSubGroup(self, user_id: int) -> bool:
+        """
+        Checks if a user has a subgroup in the database.
+
+        Args:
+            user_id (int): The ID of the user to check.
+
+        Returns:
+            bool: True if the user has a subgroup, False otherwise.
+        """
+        
+        # If found user with user_id and no subgroup then False
         if self.users.find_one(
             {"id":user_id, "sub_group": {"$exists": False}}
             ):
-            return False
+            return True
         
+        # Else True
         return True
     
     def isGroupInDB(self, group_id: str) -> bool:
