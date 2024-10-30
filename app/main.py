@@ -24,9 +24,10 @@ async def updateLessonsSchedulesChache() -> None:
     # Get parser
     parser = ruzparser.RuzParser()
 
+    groups_count = len(groups)
     # For each group, parse the schedule and save it to the database
-    for group in groups:
-        print(f"Parsing {group}")
+    for num, group in enumerate(groups):
+        print(f"Parsing... {group} ({num+1}/{groups_count})")
         # Parse the schedule for the group
         lessons_for_group = await parser.parseSchedule(group)
 
