@@ -5,8 +5,7 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 from utils import getRandomGroup
 
-import db
-from db import users
+from db import db
 from ruzbot import commands
 from ruzparser import RuzParser
 
@@ -51,7 +50,7 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
         case (2,):
             sub_group_number = int(callback.text)
-            users.update_one({"id": callback.from_user.id}, {"$set": {"sub_group": sub_group_number}})
+            db.updateUserSubGroup(user_id=callback.from_user.id, sub_group=sub_group_number)
             message = await bot.reply_to(callback, "Ваша группа и подгруппа установлены!")
             
             await commands.sendProfileCommand(bot, message)
@@ -110,7 +109,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
                 # Convert the first argument to an integer
                 group = int(args[0])
                 # Call the set group command with the callback query and the arguments
-                additional_message = await commands.setGroup(bot, callback, group, args[1])
+                await commands.setGroup(bot, callback, group, args[1])
                 # Call the back command with the additional message
                 await commands.setSubGroupCommand(bot, callback.message)
             except ValueError:
@@ -120,7 +119,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
         # If the callback query is not for any of the above handlers
         case _:
             # Print a message indicating that the callback query is not supported
-            logging.warn("Wrong comand")
+            logging.warn(f"Wrong comand {callback.data}")
 
 
 def register_handlers(bot: AsyncTeleBot):
