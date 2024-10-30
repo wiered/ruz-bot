@@ -115,10 +115,19 @@ class RuzParser:
         start = first_date_of_previous_month.strftime('%Y.%m.%d')
         end = last_date_of_next_month.strftime('%Y.%m.%d')
         
+        update_time = datetime.now()
+        
         lessons_for_this_month: List[dict] = await self.parse(group_id, start, end)
         for lesson in lessons_for_this_month:
-            date = datetime.strptime(lesson.get("date"), "%Y-%m-%d")
-            lesson.update({"date": date})
+            subgroup = 0
+            if len(list_sub_groups := lesson.get("listSubGroups")) > 0:
+                subgroup = int(list_sub_groups[0].get("subgroup")[-1])
+            lesson.update({"group_id": group_id})
+            lesson.update({"subgroup": subgroup})
+            lesson.update({"update_time": update_time})
+                
+            # date = datetime.strptime(lesson.get("date"), "%Y-%m-%d")
+            # lesson.update({"date": date})
             
         if len(lessons_for_this_month) < 1:
             return []
