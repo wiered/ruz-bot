@@ -25,7 +25,7 @@ def getDate(date: str | datetime) -> datetime:
 
     Args:
         date (str | datetime): The date to convert. If str, it should be in '%Y-%m-%d' format.
-    
+
     Returns:
         datetime: The datetime object.
     """
@@ -33,7 +33,7 @@ def getDate(date: str | datetime) -> datetime:
         datetime_object = datetime.strptime(date, '%Y-%m-%d')
     else:
         datetime_object = date
-        
+
     return datetime_object
 
 
@@ -48,19 +48,19 @@ def formatDay(lesson):
         str: The formatted lesson.
     """
     lessons = ""
-    
+
     # Add the lesson number
     lessons += f"*-- {LESSON_NUMBER_DICT.get(lesson.get('beginLesson'))} пара [{lesson.get('beginLesson')} - {lesson.get('endLesson')}] --*" + '\n  '
-    
+
     # Add the lesson discipline and kind of work
     lessons += lesson.get("discipline") + f" ({parseKindOfWork(lesson.get('kindOfWork'))})" + '\n  '
-    
+
     # Add the lesson auditorium
     lessons += f"Аудитория: {lesson.get('auditorium').split('/')[1]}" + '\n  '
-    
+
     # Add the lesson lecturer
     lessons += f"Преподаватель: {lesson.get('lecturer_title')}, {lesson.get('lecturer_rank')}" + '\n'
-    
+
     return lessons
 
 
@@ -74,56 +74,55 @@ def escapeMessage(message):
     Returns:
         str: The escaped string.
     """
-    
+
     # List of special characters that must be escaped
-    replacables = ['.', '-', '(', ')', "=", "{", "}", "!"]  
-    
+    replacables = ['.', '-', '(', ')', "=", "{", "}", "!"]
+
     # Iterate over each character in the list
     for ch in replacables:
         # Replace the character with its escaped version
-        message = message.replace(ch, f"\\{ch}")  
-        
+        message = message.replace(ch, f"\\{ch}")
+
     return message
 
 
-def formatDayMessage(data, _timedelta = 0):
+def formatDayMessage(data, date):
     """
     Format message for group for one day
-    
+
     Args:
         data (dict): Schedule in JSON format
-        _timedelta (int): Timedelta in days. Default is 0
-    
+        date (datetime): Date
+
     Returns:
         str: Formatted message
     """
-    date = datetime.today() + timedelta(days = _timedelta)
     week_day = WEEK_DAYS_LABEL_DICT.get(date.weekday())
     date = date.strftime('%d.%m')
-    
+
     if len(data) == 0:
-        return escapeMessage(f"= {date} = \n\nПар нет")
-    
+        return escapeMessage(f"= {week_day} ({date}) = \n\nПар нет")
+
     lessons = ""
     for lesson in data:
         lessons += formatDay(lesson)
-    
+
     return escapeMessage(f"= {week_day} ({date}) = \n{lessons}")
 
 
 def formatWeekMessage(data):
     """
     Format message for group for one week
-    
+
     Args:
         data (dict): Schedule in JSON format
-    
+
     Returns:
         str: Formatted message
     """
     if len(data) == 0:
         return "Пар нет"
-    
+
     dates = {
     }
     for i in range(len(data)):
@@ -132,24 +131,25 @@ def formatWeekMessage(data):
         dates.update(
             {data[i].get("date"): f"_= {week_day} ({datetime_object.strftime('%d.%m')}) =_ \n"}
             )
-    
+
     for lesson in data:
         tmp = dates.get(lesson.get("date")) + formatDay(lesson)
         dates.update({lesson.get("date"): tmp})
-    
+
     datetime_object = getDate(data[0].get("date"))
-    
+
     lessons = "== Расписание на неделю {} - {} == \n\n".format(
-        datetime_object.strftime('%d.%m'), 
+        datetime_object.strftime('%d.%m'),
         (datetime_object + timedelta(days=5)).strftime('%d.%m')
         )
     for key in dates.keys():
         lessons += dates.get(key) + "\n"
-    
+
     if len(lessons) > 4000:
         lessons = "Message too long\n\n"
-    
+
     return escapeMessage(lessons)
+
 
 def parseKindOfWork(kind_of_work):
     """
@@ -159,6 +159,28 @@ def parseKindOfWork(kind_of_work):
         return "Лек."
     if kind_of_work == "Практические (семинарские) занятия":
         return "Пр. зан."
-    
+
     return kind_of_work
-    
+
+
+def get_dates_in_range(start_date: str, end_date: str) -> list:
+    """
+    Get all dates in the range between start_date and end_date (inclusive).
+
+    :param start_date: The start date in 'YYYY-MM-DD' format.
+    :param end_date: The end date in 'YYYY-MM-DD' format.
+    :return: List of dates in 'YYYY-MM-DD' format.
+    """
+
+    # Convert string dates to datetime objects
+    start = start_date
+    end = end_date
+
+    # Generate list of dates
+    date_list = []
+    current_date = start
+    while current_date <= end:
+        date_list.append(current_date.strftime("%Y-%m-%d"))
+        current_date += timedelta(days=1)
+
+    return date_list
