@@ -239,6 +239,10 @@ class DataBase():
         # Get all the groups from the users collection
         return self.users.distinct("group_id")
 
+    def getAllGroupsList(self) -> List[str]:
+        """Alias for getGroupsList"""
+        return self.getGroupsList()
+
     def saveScheduleToDB(self, group_id: str, lessons_for_this_month: List[dict]):
         """
         Save the lessons for the given group to the database
