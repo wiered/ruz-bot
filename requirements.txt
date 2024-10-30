@@ -11,7 +11,6 @@ idna==3.8
 multidict==6.0.5
 pymongo==4.8.0
 pyTelegramBotAPI==4.22.1
-regex==2024.7.24
 requests==2.32.3
 urllib3==2.2.2
 yarl==1.9.4
