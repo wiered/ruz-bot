@@ -71,7 +71,6 @@ class DataBase():
         if str(group_id) in self._lessons_db.list_collection_names():
             return True
 
-        # If the group is not found, it is not cached
         return False
 
     def isDateRangeInDB(self, group_id: str, start: datetime, end: datetime) -> bool:
