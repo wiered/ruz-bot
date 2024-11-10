@@ -161,20 +161,8 @@ class DataBase():
     def getLessonsInDateRange(self, group_id, start_date, end_date, sub_group):
         lessons_list = []
         dates_in_range = utils.formatters.get_dates_in_range(start_date, end_date)
-        # lessons_list = lesson.find({"date": {"$in": ["2024-09-01", "2024-09-02"]}})
+        print(dates_in_range, group_id, sub_group)
         lessons_list = self._lessons_db[str(group_id)].find({"date": {"$in": dates_in_range}, "subgroup": {"$in": [sub_group, 0]}})
-
-        # for lesson in all_lessons_list:
-        #     # Check if the lesson is before the start of the day
-        #     if (start_date - lesson.get("date")).total_seconds() > 0:
-        #         pass
-        #     # Check if the lesson is after the end of the day
-        #     elif (lesson.get("date") - end_date).total_seconds() > 86300:
-        #         break
-        #     # If the lesson is on the given day, add it to the list
-        #     else:
-        #         if utils.isSubGroupValid(lesson, sub_group):
-        #             lessons_list.append(lesson)
 
         return list(lessons_list)
 
