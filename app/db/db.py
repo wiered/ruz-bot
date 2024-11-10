@@ -83,23 +83,26 @@ class DataBase():
             return False
 
         # Get the bounds of the previous and next month
-        reference_date = datetime.now()
+        reference_date = datetime.today()
         start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
 
         print(f"{reference_date = }\n{start_of_previous_month = }\n{end_of_next_month = }")
 
         # Check if the start of range is before the start of the previous month
+        print((start - start_of_previous_month).total_seconds(), "Should be positive")
         if (start - start_of_previous_month).total_seconds() < 0:
             # If it is, the range is not cached
             return False
 
         # Check if the end of range is after the end of the next month
+        print((end_of_next_month - end).total_seconds(), "Should be positive")
         if (end_of_next_month - end).total_seconds() < 0:
             # If it is, the range is not cached
             return False
 
         # If the date is between the start of the previous month and the end of the next month
         # and the group is cached, then the day is cached
+        print("Date is in range, returning True")
         return True
 
     def isDayInDB(self, group_id, date: datetime) -> bool:
