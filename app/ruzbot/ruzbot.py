@@ -56,5 +56,3 @@ async def startCommand(message):
         reply_message,
         reply_markup = markup)
 
-
-print(list(db.users.find()))
