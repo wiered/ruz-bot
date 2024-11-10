@@ -6,10 +6,17 @@ from telebot.util import quick_markup
 from db import db
 from ruzbot import markups
 
+
+__version__ = '11.11.24'
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
-bot = AsyncTeleBot(BOT_TOKEN)
+class RuzBot(AsyncTeleBot):
+    def __init__(self,  __version__):
+        super().__init__(BOT_TOKEN)
 
+        self.__version__ = __version__
+
+bot = RuzBot(__version__)
 
 @bot.message_handler(commands=['start'])
 async def startCommand(message):

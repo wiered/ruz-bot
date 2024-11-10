@@ -2,8 +2,6 @@ from datetime import datetime, timedelta
 from telebot.util import quick_markup
 
 def generateStartMarkup():
-    today = datetime.today().strftime('%Y-%m-%d')
-    tommorrow = (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d')
     return quick_markup({
         # Button to view the schedule for today
         "Сегодня": {'callback_data' : f'parseDay -1'},

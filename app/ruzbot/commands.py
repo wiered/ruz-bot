@@ -196,7 +196,7 @@ async def sendProfileCommand(bot, message):
 
     # Create a message with the user's group and buttons
     #   to change the group or go back to the start
-    reply_message = f"Ваш профиль: \nГруппа: {group_name}\nПодгруппа: {sub_group}\ngroup_id: {group_id}"
+    reply_message = f"Ваш профиль: \nГруппа: {group_name}\nПодгруппа: {sub_group}\ngroup_id: {group_id}\nbot_version: {bot.__version__}"
     markup = quick_markup({
         "Установить группу": {'callback_data' : 'configureGroup'},
         "Назад": {'callback_data' : 'start'},
