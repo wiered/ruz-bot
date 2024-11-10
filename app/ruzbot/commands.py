@@ -43,11 +43,10 @@ async def dateCommand(bot, message, date: str):
         # parse date
         target_date = datetime.strptime(date, '%Y-%m-%d')
 
-    if db.isDayInDB(group_id, target_date) and False:
+    if db.isDayInDB(group_id, target_date):
         # get data from db
         data = db.getDay(user_id, target_date)
     else:
-        print('date not in db')
         # parse the schedule for the specified date
         parser = RuzParser()
         data = await parser.parseDay(group_id, target_date)
