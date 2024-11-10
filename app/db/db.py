@@ -13,7 +13,7 @@ class DataBase():
         self._users_db = self._client.ruzbotdb
         self._users = self._users_db.users
 
-        self._lessons_db = self._client.ruzbotdb.lessons
+        self._lessons_db = self._client["ruz-bot-lessons"]
 
     @property
     def client(self):
@@ -250,6 +250,7 @@ class DataBase():
             lessons_for_this_month (List[dict]): The lessons for the given group
         """
         # If the group is already cached, delete the old entry
+        print(f"Dropping {group_id}")
         self.deleteScheduleFromDB(group_id)
         group_collection = self._lessons_db[str(group_id)]
         group_collection.insert_many(lessons_for_this_month)
