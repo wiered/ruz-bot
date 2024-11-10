@@ -6,9 +6,9 @@ def generateStartMarkup():
     tommorrow = (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d')
     return quick_markup({
         # Button to view the schedule for today
-        "Сегодня": {'callback_data' : f'parseDay {today}'},
+        "Сегодня": {'callback_data' : f'parseDay -1'},
         # Button to view the schedule for tomorrow
-        "Завтра": {'callback_data' : f'parseDay {tommorrow}'},
+        "Завтра": {'callback_data' : f'parseDay -2'},
         # Button to view the schedule for this week
         "Эта неделя": {'callback_data' : 'parseWeek 0'},
         # Button to view the schedule for next week

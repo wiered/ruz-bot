@@ -31,21 +31,30 @@ async def dateCommand(bot, message, date: str):
     user = db.getUser(user_id)
     group_id = user.get("group_id")
 
-    # parse date
-    date = datetime.strptime(date, '%Y-%m-%d')
 
-    if db.isDayInDB(group_id, date):
+    target_date = datetime.today()
+    try:
+        flag = int(date)
+        if flag == -1:
+            target_date = datetime.today()
+        elif flag == -2:
+            target_date = datetime.today() + timedelta(days=1)
+    except:
+        # parse date
+        target_date = datetime.strptime(date, '%Y-%m-%d')
+
+    if db.isDayInDB(group_id, target_date):
         # get data from db
-        data = db.getDay(user_id, date)
+        data = db.getDay(user_id, target_date)
     else:
         # parse the schedule for the specified date
         parser = RuzParser()
-        data = await parser.parseDay(group_id, date)
+        data = await parser.parseDay(group_id, target_date)
 
-    reply_message = formatters.formatDayMessage(data, date)
+    reply_message = formatters.formatDayMessage(data, target_date)
 
-    previous_day = (date - timedelta(days=1)).strftime('%Y-%m-%d')
-    next_day = (date + timedelta(days=1)).strftime('%Y-%m-%d')
+    previous_day = (target_date - timedelta(days=1)).strftime('%Y-%m-%d')
+    next_day = (target_date + timedelta(days=1)).strftime('%Y-%m-%d')
 
     markup = quick_markup({
         "Пред. день": {'callback_data' : 'parseDay {}'.format(previous_day)},
