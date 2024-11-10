@@ -1,6 +1,6 @@
 import os
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 from pymongo import MongoClient
 
@@ -76,12 +76,17 @@ class DataBase():
     def isDateRangeInDB(self, group_id: str, start: datetime, end: datetime) -> bool:
         # If the group is not cached, the day is not cached
         # If group is not chached, the day is not cached
+        print(group_id, start, end)
+
+        print(self.isGroupInDB(group_id), "Should be true")
         if not self.isGroupInDB(group_id):
             return False
 
         # Get the bounds of the previous and next month
         reference_date = datetime.now()
         start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
+
+        print(f"{reference_date = }\n{start_of_previous_month = }\n{end_of_next_month = }")
 
         # Check if the start of range is before the start of the previous month
         if (start - start_of_previous_month).total_seconds() < 0:
@@ -108,6 +113,8 @@ class DataBase():
         Returns:
             bool: True if the day is cached in the database, otherwise False
         """
+
+        date = date + timedelta(hours = 3)
         return self.isDateRangeInDB(group_id, date, date)
 
     def isWeekInDB(self, group_id, date):

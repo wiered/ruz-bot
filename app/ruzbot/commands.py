@@ -43,7 +43,7 @@ async def dateCommand(bot, message, date: str):
         # parse date
         target_date = datetime.strptime(date, '%Y-%m-%d')
 
-    if db.isDayInDB(group_id, target_date):
+    if db.isDayInDB(group_id, target_date) and False:
         # get data from db
         data = db.getDay(user_id, target_date)
     else:
