@@ -13,7 +13,7 @@ class DataBase():
         self._users_db = self._client.ruzbotdb
         self._users = self._users_db.users
 
-        self._lessons_db = self._client["ruz-bot-lessons"]
+        self._lessons_db = self._client.ruzbotdb.lessons
 
     @property
     def client(self):
