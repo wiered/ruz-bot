@@ -250,6 +250,8 @@ class DataBase():
             lessons_for_this_month (List[dict]): The lessons for the given group
         """
         # If the group is already cached, delete the old entry
+        if len(lessons_for_this_month) == 0:
+            return
         print(f"Dropping {group_id}")
         self.deleteScheduleFromDB(group_id)
         group_collection = self._lessons_db[str(group_id)]
