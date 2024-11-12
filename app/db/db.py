@@ -76,9 +76,6 @@ class DataBase():
     def isDateRangeInDB(self, group_id: str, start: datetime, end: datetime) -> bool:
         # If the group is not cached, the day is not cached
         # If group is not chached, the day is not cached
-        print(group_id, start, end)
-
-        print(self.isGroupInDB(group_id), "Should be true")
         if not self.isGroupInDB(group_id):
             return False
 
@@ -86,23 +83,19 @@ class DataBase():
         reference_date = datetime.today()
         start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
 
-        print(f"{reference_date = }\n{start_of_previous_month = }\n{end_of_next_month = }")
 
         # Check if the start of range is before the start of the previous month
-        print((start - start_of_previous_month).total_seconds(), "Should be positive")
         if (start - start_of_previous_month).total_seconds() < 0:
             # If it is, the range is not cached
             return False
 
         # Check if the end of range is after the end of the next month
-        print((end_of_next_month - end).total_seconds(), "Should be positive")
         if (end_of_next_month - end).total_seconds() < 0:
             # If it is, the range is not cached
             return False
 
         # If the date is between the start of the previous month and the end of the next month
         # and the group is cached, then the day is cached
-        print("Date is in range, returning True")
         return True
 
     def isDayInDB(self, group_id, date: datetime) -> bool:
@@ -171,7 +164,6 @@ class DataBase():
     def getLessonsInDateRange(self, group_id, start_date, end_date, sub_group):
         lessons_list = []
         dates_in_range = utils.formatters.get_dates_in_range(start_date, end_date)
-        print(dates_in_range, group_id, sub_group)
         lessons_list = self._lessons_db[str(group_id)].find({"date": {"$in": dates_in_range}, "subgroup": {"$in": [sub_group, 0]}})
 
         return list(lessons_list)
@@ -252,7 +244,6 @@ class DataBase():
         # If the group is already cached, delete the old entry
         if len(lessons_for_this_month) == 0:
             return
-        print(f"Dropping {group_id}")
         self.deleteScheduleFromDB(group_id)
         group_collection = self._lessons_db[str(group_id)]
         group_collection.insert_many(lessons_for_this_month)
