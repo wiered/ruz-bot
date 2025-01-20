@@ -15,7 +15,7 @@ cd ruz-bot
 ```
 
 3. Run your own MongoDB localy or host it somewhere
-   
+
     Guide: https://www.mongodb.com/
 
 4. Create .env and add BOT_TOKEN, ADMIN_ID and MONGODB_ADRESS
@@ -25,6 +25,7 @@ cd ruz-bot
 BOT_TOKEN=your-bot-token-here
 ADMIN_ID=your-id
 MONGODB_ADRESS=mongodb://ip:port
+DOUPDATE=1 # 1 if want update on start
 ```
 
 5. Build Docker image
