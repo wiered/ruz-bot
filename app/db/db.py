@@ -136,6 +136,15 @@ class DataBase():
     def getLessonsForGroup(self, group_id):
         return list(self._lessons_db[str(group_id)].find({}))
 
+    def getGroupLastUpdateTime(self, group_id) -> datetime:
+        lessons = self.getLessonsForGroup(group_id)
+
+        # if not lessons return 1970
+        if len(lessons) == 0:
+            return datetime.strptime("01-01-1970", '%m-%d-%Y')
+
+        return lessons[0].get("update_time")
+
     def addUser(self, user_id, group_id, group_name, sub_group = None):
         self.users.insert_one({
             "id": user_id,
