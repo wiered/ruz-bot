@@ -51,7 +51,8 @@ async def main():
     This function starts the bot.
     """
 
-    await updateLessonsSchedulesChache()
+    if int(os.environ.get("DOUPDATE")) == 1:
+        await updateLessonsSchedulesChache()
 
     # Creating tasks for bot and timer
     bot_task = asyncio.create_task(startBot())

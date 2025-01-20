@@ -1,6 +1,6 @@
 import os
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 from pymongo import MongoClient
 
@@ -80,8 +80,9 @@ class DataBase():
             return False
 
         # Get the bounds of the previous and next month
-        reference_date = datetime.now()
+        reference_date = datetime.today()
         start_of_previous_month, end_of_next_month = utils.getPreviousAndNextMonthBounds(reference_date)
+
 
         # Check if the start of range is before the start of the previous month
         if (start - start_of_previous_month).total_seconds() < 0:
@@ -108,6 +109,8 @@ class DataBase():
         Returns:
             bool: True if the day is cached in the database, otherwise False
         """
+
+        date = date + timedelta(hours = 3)
         return self.isDateRangeInDB(group_id, date, date)
 
     def isWeekInDB(self, group_id, date):
@@ -132,6 +135,15 @@ class DataBase():
 
     def getLessonsForGroup(self, group_id):
         return list(self._lessons_db[str(group_id)].find({}))
+
+    def getGroupLastUpdateTime(self, group_id) -> datetime:
+        lessons = self.getLessonsForGroup(group_id)
+
+        # if not lessons return 1970
+        if len(lessons) == 0:
+            return datetime.strptime("01-01-1970", '%m-%d-%Y')
+
+        return lessons[0].get("update_time")
 
     def addUser(self, user_id, group_id, group_name, sub_group = None):
         self.users.insert_one({
@@ -161,7 +173,6 @@ class DataBase():
     def getLessonsInDateRange(self, group_id, start_date, end_date, sub_group):
         lessons_list = []
         dates_in_range = utils.formatters.get_dates_in_range(start_date, end_date)
-        print(dates_in_range, group_id, sub_group)
         lessons_list = self._lessons_db[str(group_id)].find({"date": {"$in": dates_in_range}, "subgroup": {"$in": [sub_group, 0]}})
 
         return list(lessons_list)
@@ -240,6 +251,8 @@ class DataBase():
             lessons_for_this_month (List[dict]): The lessons for the given group
         """
         # If the group is already cached, delete the old entry
+        if len(lessons_for_this_month) == 0:
+            return
         self.deleteScheduleFromDB(group_id)
         group_collection = self._lessons_db[str(group_id)]
         group_collection.insert_many(lessons_for_this_month)
