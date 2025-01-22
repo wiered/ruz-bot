@@ -14,12 +14,12 @@ async def updateLessonsSchedulesChache() -> None:
     """
     Updates the lessons for all groups in the database.
 
-    This function is called periodically to update the lessons for all groups in the database.
+    This function is called at the start of the program if configured.
 
     :return: None
     """
 
-    logging.info("Updating schedules...")
+    logging.info("Startup schedules updating...")
 
     # Get all groups from the database
     groups = db.getAllGroupsList()
