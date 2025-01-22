@@ -1,9 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 
 from db import db
 from ruzparser import RuzParser
+
 
 class Timer:
     """
@@ -37,14 +38,6 @@ class Timer:
         """
         self._task.cancel()
 
-async def isParsingTime() -> None:
-    """
-    Check if the current time is 06:00 or 12:00.
-    If it is, run the parseMonthlyScheduleForGroups function to update the database.
-    """
-
-    logging.info(f"parsing Monthly Schedule For Groups")
-    await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups() -> None:
     """
@@ -107,8 +100,8 @@ async def timerPooling() -> None:
             # Waiting until midnight
             await sleepUntilMidnight()
 
-            # Create a new Timer that calls isParsingTime after 60 seconds
-            timer = Timer(60, isParsingTime)
+            # Create a new Timer that calls parseMonthlyScheduleForGroups after 60 seconds
+            timer = Timer(60, parseMonthlyScheduleForGroups)
 
             # Sleeping 60 seconds for no reason
             await asyncio.sleep(60)
