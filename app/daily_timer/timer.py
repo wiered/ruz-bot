@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from db import db
@@ -42,9 +42,9 @@ async def isParsingTime() -> None:
     Check if the current time is 06:00 or 12:00.
     If it is, run the parseMonthlyScheduleForGroups function to update the database.
     """
-    hour = int(datetime.today().strftime('%H'))
-    if hour == 0:
-        await parseMonthlyScheduleForGroups()
+
+    logging.info(f"parsing Monthly Schedule For Groups")
+    await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups() -> None:
     """
@@ -54,31 +54,41 @@ async def parseMonthlyScheduleForGroups() -> None:
     logging.info("Updating schedules...")
     await asyncio.sleep(0.1)
 
+    # Create parser object
     parser = RuzParser()
-    for group_id in db.getAllGroupsList():
-        if db.getUserCountByGroup(group_id) <= 3:
-            db.deleteScheduleFromDB(group_id)
-            continue
+
+    # get all groups from database
+    groups = db.getAllGroupsList()
+    groups_count = len(groups)
+
+    for num, group in enumerate(groups):
         # Get the last update time from the database
-        lesson = db.getLessonsForGroup(group_id)[0]
+        last_update = db.getGroupLastUpdateTime(group)
 
-        if lesson:
-            last_updated = lesson.get("last_update")
-            total_seconds = (datetime.now() - last_updated).total_seconds()
-        else:
-            total_seconds = 36000
+        # If group schedule is updated less than a hour ago, skip updating
+        if (datetime.now() - last_update).seconds < 3600:
+            continue
 
-        # If the last update was more than an hour ago, update the database
-        if total_seconds > 3600:
-            # Parse the schedule for the group
-            lessons_for_group = await parser.parseSchedule(group_id)
-            # Save the data to the database
-            db.saveScheduleToDB(group_id, lessons_for_group)
-            # Wait a bit before parsing the next group
-            await asyncio.sleep(20)
+        # If the group has less than 3 users, delete the schedule
+        if db.getUserCountByGroup(group) <= 3:
+            db.deleteScheduleFromDB(group)
+            continue
+
+        logging.info(f"Parsing... {group} ({num+1}/{groups_count})")
+        lessons_for_group = await parser.parseSchedule(group)
+        db.saveScheduleToDB(group, lessons_for_group)
+        await asyncio.sleep(20)
 
     return
 
+async def sleepUntilMidnight() -> None:
+    nowtime = datetime.now()
+    tomorrow = (nowtime + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+        )
+    seconds_until_midnight = (tomorrow - nowtime).total_seconds()
+    print(f"Sleeping for {seconds_until_midnight:.2f} seconds until midnight...")
+    await asyncio.sleep(seconds_until_midnight)
 
 async def timerPooling() -> None:
     """
@@ -91,11 +101,18 @@ async def timerPooling() -> None:
     polling = True
     logging.debug("Timer started")
     try:
+        await sleepUntilMidnight()
+
         while polling:
+            # Waiting until midnight
+            await sleepUntilMidnight()
+
             # Create a new Timer that calls isParsingTime after 60 seconds
-            timer = Timer(600, isParsingTime)
-            # Wait 60 seconds before creating the next Timer
-            await asyncio.sleep(600)
+            timer = Timer(60, isParsingTime)
+
+            # Sleeping 60 seconds for no reason
+            await asyncio.sleep(60)
+
     except KeyboardInterrupt:
         # If the user stops the program with Ctrl+C, exit the loop
         return
