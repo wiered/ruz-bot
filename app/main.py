@@ -19,7 +19,7 @@ async def updateLessonsSchedulesChache() -> None:
     :return: None
     """
 
-    logging.info("Startup schedules updating...")
+    logging.info("Startup schedules update...")
 
     # Get all groups from the database
     groups = db.getAllGroupsList()
