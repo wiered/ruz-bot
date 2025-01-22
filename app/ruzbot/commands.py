@@ -21,7 +21,7 @@ async def dateCommand(bot, message, date: str):
     """
 
     # convert _timedelta to int
-    logging.info('Running date command {}'.format(date))
+    logging.debug('Running date command {}'.format(date))
     # get user id from message
     user_id = message.reply_to_message.from_user.id
     if not db.isUserHasSubGroup(user_id):
@@ -83,7 +83,7 @@ async def weekCommand(bot, message, _timedelta):
     Returns:
         None
     """
-    logging.info('Running week command {}'.format(_timedelta))
+    logging.debug('Running week command {}'.format(_timedelta))
     user_id = message.reply_to_message.from_user.id
 
     if not db.isUserHasSubGroup(user_id):
@@ -230,12 +230,12 @@ async def setGroup(bot, callback, group_id, group_name) -> str:
 
     # If the user is not already in the database, add them
     if not db.isUserKnown(user_id):
-        logging.info(
+        logging.debug(
             "Adding user into database: {} - {}".format(user_id, group_name)
             )
         db.addUser(user_id, group_id, group_name)
     else:
-        logging.info("Updating user in database: {} - {}".format(user_id, group_name))
+        logging.debug("Updating user in database: {} - {}".format(user_id, group_name))
         # Else update user in database
         db.updateUser(user_id, group_id, group_name)
 
