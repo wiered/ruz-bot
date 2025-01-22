@@ -44,7 +44,6 @@ async def isParsingTime() -> None:
     """
     hour = int(datetime.today().strftime('%H'))
     if hour == 0:
-        print(f"parsing Monthly Schedule For Groups, {hour = }")
         await parseMonthlyScheduleForGroups()
 
 async def parseMonthlyScheduleForGroups() -> None:
@@ -52,6 +51,7 @@ async def parseMonthlyScheduleForGroups() -> None:
     Parse the schedule for all groups and update the
         database if it's been more than an hour since the last update.
     """
+    logging.info("Updating schedules...")
     await asyncio.sleep(0.1)
 
     parser = RuzParser()
@@ -89,7 +89,7 @@ async def timerPooling() -> None:
     The loop can be stopped with Ctrl+C.
     """
     polling = True
-    logging.info("Timer started")
+    logging.debug("Timer started")
     try:
         while polling:
             # Create a new Timer that calls isParsingTime after 60 seconds
