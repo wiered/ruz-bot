@@ -17,7 +17,7 @@ class RuzParser:
     """
     Class for parsing schedule from MSTUCA
     """
-    async def fetch(self, client: aiohttp.ClientSession, url: str) -> dict:
+    async def fetch(self, client: aiohttp.ClientSession, url: str, ssl = True) -> dict:
         """
         Fetches JSON data from the given URL.
 
@@ -28,7 +28,7 @@ class RuzParser:
         Returns:
             dict: The JSON data as a dictionary.
         """
-        async with client.get(url) as resp:
+        async with client.get(url=url, ssl=ssl) as resp:
             # Check if the request was successful
             assert resp.status == 200
             # Get the JSON data from the response
@@ -49,7 +49,7 @@ class RuzParser:
         """
         logging.debug(f"Running parse for {group} from {start_date} to {end_date}")
         async with aiohttp.ClientSession() as session:
-            json: dict = await self.fetch(session, LESSONS_URL.format(group, start_date, end_date))
+            json: dict = await self.fetch(session, LESSONS_URL.format(group, start_date, end_date), ssl=False)
 
         return json
 
@@ -145,6 +145,6 @@ class RuzParser:
             List[dict]: List of groups
         """
         async with aiohttp.ClientSession() as session:
-            json = await self.fetch(session, GROUP_URL.format(group_name))
+            json = await self.fetch(session, GROUP_URL.format(group_name), ssl=False)
 
         return json

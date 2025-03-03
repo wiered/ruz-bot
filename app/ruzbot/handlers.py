@@ -11,7 +11,7 @@ from ruzparser import RuzParser
 
 async def callbackFilter(call) -> bool:
     """
-    This function is a filter for the callback queries. 
+    This function is a filter for the callback queries.
     It always returns True, meaning that all callback queries are allowed.
 
     Args:
@@ -35,13 +35,13 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             groups_list = await parser.search_group(group_name)
             if not groups_list:
                 await bot.reply_to(
-                    callback, 
+                    callback,
                     f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {getRandomGroup()}"
                     )
                 return
 
             markup = quick_markup({
-                group.get("label"): 
+                group.get("label"):
                     {
                         "callback_data": f"setGroup {group.get('id')} {group.get('label')}"
                     } for group in groups_list
@@ -52,10 +52,10 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             sub_group_number = int(callback.text)
             db.updateUserSubGroup(user_id=callback.from_user.id, sub_group=sub_group_number)
             message = await bot.reply_to(callback, "Ваша группа и подгруппа установлены!")
-            
+
             await commands.sendProfileCommand(bot, message)
         case _:
-            logging.warn(f"Wrong case: {callback.text}")
+            logging.warning(f"Wrong case: {callback.text}")
 
 
 async def buttonsCallback(callback, bot: AsyncTeleBot):
@@ -87,7 +87,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
         case ['parseWeek', *args]:
             # Call the week command with the argument from the callback query
             await commands.weekCommand(bot, callback.message, args[0])
-            
+
         # If the callback query is for the show profile button
         case ['showProfile']:
             # Call the send profile command with the callback query message
@@ -97,8 +97,8 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
         case ['configureGroup']:
             # Call the set group command with the reply to message from the callback query
             await commands.setGroupCommand(bot, callback.message.reply_to_message)
-            
-        # If the callback query is for the configure sub group button    
+
+        # If the callback query is for the configure sub group button
         case ['configureSubGroup']:
             # Call the send profile command with the callback query message
             await commands.setSubGroupCommand(bot, callback.message)
@@ -115,7 +115,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 # If the conversion to an integer fails, return
                 return
-        
+
         # If the callback query is not for any of the above handlers
         case _:
             # Print a message indicating that the callback query is not supported
@@ -123,6 +123,6 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
 
 
 def register_handlers(bot: AsyncTeleBot):
+    logging.info("Registering handlers...")
     bot.register_message_handler(textCallbackHandler, pass_bot=True)
     bot.register_callback_query_handler(callback = buttonsCallback, func = callbackFilter, pass_bot=True)
-  
