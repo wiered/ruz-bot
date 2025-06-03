@@ -39,14 +39,35 @@ class RuzParser:
         Returns:
             dict: The JSON data as a dictionary.
         """
-        logger.debug(f"Fetching URL: {url}")
-        async with client.get(url=url, ssl=ssl) as resp:
-            if resp.status != 200:
-                logger.error(f"Failed to fetch {url}: HTTP {resp.status}")
+        max_retries = 5
+        backoff = 1  # initial backoff in seconds
+
+        for attempt in range(1, max_retries + 1):
+            logger.debug(f"[Attempt {attempt}] Fetching URL: {url}")
+            async with client.get(url=url, ssl=ssl) as resp:
+                status = resp.status
+
+                if status == 200:
+                    data = await resp.json(encoding="Windows-1251")
+                    logger.debug(f"Successfully received data ({len(str(data))} bytes) from {url}")
+                    return data
+
+                if status == 429:
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after is not None and retry_after.isdigit():
+                        delay = int(retry_after)
+                        logger.warning(f"Received 429, Retry-After={delay}s; sleeping {delay}s")
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.warning(f"Received 429 without Retry-After; sleeping {backoff}s")
+                        await asyncio.sleep(backoff)
+                        backoff *= 2
+                    continue  # retry loop
+
+                logger.error(f"Failed to fetch {url}: HTTP {status}")
                 resp.raise_for_status()
-            data = await resp.json(encoding="Windows-1251")
-            logger.debug(f"Received data from {url}: {len(str(data))} bytes")
-            return data
+
+        raise aiohttp.ClientError(f"Exceeded {max_retries} retries for URL: {url}")
 
     async def parse(self, group: str, start_date: str, end_date: str) -> dict:
         """
