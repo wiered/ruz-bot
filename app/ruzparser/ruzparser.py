@@ -118,6 +118,7 @@ class RuzParser:
             List[dict]: Schedule in JSON format
         """
         logger.info(f"parseSchedule called for group={group_id}")
+
         first_this_month = datetime.today().replace(day=1)
         first_prev_month = (first_this_month - timedelta(days=2)).replace(day=1)
 
@@ -132,29 +133,33 @@ class RuzParser:
         )[1]
         last_next_month = first_next_month + timedelta(days=last_day_next_month - 1)
 
-        start = first_prev_month.strftime("%Y.%m.%d")
-        end = last_next_month.strftime("%Y.%m.%d")
+        start_str = first_prev_month.strftime("%Y.%m.%d")
+        end_str = last_next_month.strftime("%Y.%m.%d")
         update_time = datetime.now()
 
-        logger.debug(f"Month bounds for {group_id}: start={start}, end={end}, update_time={update_time}")
-        lessons_for_this_month: List[dict] = await self.parse(group_id, start, end)
+        logger.debug(f"Month bounds for {group_id}: start={start_str}, end={end_str}, update_time={update_time}")
+        lessons_for_this_month: List[dict] = await self.parse(group_id, start_str, end_str)
         logger.debug(f"Fetched {len(lessons_for_this_month)} raw lessons for {group_id}")
 
+        processed = []
         for lesson in lessons_for_this_month:
             subgroup = 0
             list_sub = lesson.get("listSubGroups", [])
             if len(list_sub) > 0:
                 subgroup = int(list_sub[0].get("subgroup")[-1])
+
             lesson["group_id"] = group_id
             lesson["subgroup"] = subgroup
-            lesson["update_time"] = update_time
+            lesson["update_time"] = update_time.isoformat()
 
-        if len(lessons_for_this_month) < 1:
+            processed.append(lesson)
+
+        if len(processed) < 1:
             logger.warning(f"No lessons returned for group {group_id}")
             return []
 
-        logger.info(f"parseSchedule completed with {len(lessons_for_this_month)} lessons for {group_id}")
-        return lessons_for_this_month
+        logger.info(f"parseSchedule completed with {len(processed)} lessons for {group_id}")
+        return processed
 
     async def search_group(self, group_name: str) -> List[dict]:
         """
