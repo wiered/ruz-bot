@@ -9,35 +9,50 @@ from db import db
 from ruzbot import commands
 from ruzparser import RuzParser
 
+# --------------------
+# Logging Configuration
+# --------------------
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+logger.propagate = False
+
+
 async def callbackFilter(call) -> bool:
     """
     This function is a filter for the callback queries.
     It always returns True, meaning that all callback queries are allowed.
-
-    Args:
-        call (CallbackQuery): The callback query object
-
-    Returns:
-        bool: Always True
     """
+    logger.debug(f"callbackFilter called for call_id={call.id}")
     return True
 
 
 async def textCallbackHandler(callback, bot: AsyncTeleBot):
-    match tuple(i for i, pattern in enumerate([
-                                            r"\w+\d+",
-                                            r"\w+-\w+\d+",
-                                            r"\d",
-                                            ]) if re.match(pattern, callback.text)):
+    """
+    Handle text-based callbacks matching certain patterns:
+    - r"\w+\d+"     (e.g. "ABC123")
+    - r"\w+-\w+\d+" (e.g. "AB-CD123")
+    - r"\d"         (single digit for sub-group)
+    """
+    logger.info(f"textCallbackHandler invoked: user_id={callback.from_user.id}, text={callback.text!r}")
+    patterns = [r"\w+\d+", r"\w+-\w+\d+", r"\d"]
+    match tuple(i for i, pattern in enumerate(patterns) if re.match(pattern, callback.text)):
         case (0,) | (1,):
             group_name = callback.text
+            logger.debug(f"Group selection text detected: {group_name}")
             parser = RuzParser()
             groups_list = await parser.search_group(group_name)
             if not groups_list:
+                logger.warning(f"No groups found for '{group_name}'")
                 await bot.reply_to(
                     callback,
                     f"❌ Указано недопустимое имя группы! Попробуйте ещё раз, например: {getRandomGroup()}"
-                    )
+                )
                 return
 
             markup = quick_markup({
@@ -47,82 +62,76 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
                     } for group in groups_list
             }, row_width=1)
 
+            logger.debug(f"Replying with {len(groups_list)} group options")
             await bot.reply_to(callback, "Выбери группу", reply_markup=markup)
+
         case (2,):
             sub_group_number = int(callback.text)
+            logger.debug(f"Sub-group selection detected: {sub_group_number} for user_id={callback.from_user.id}")
             db.updateUserSubGroup(user_id=callback.from_user.id, sub_group=sub_group_number)
             message = await bot.reply_to(callback, "Ваша группа и подгруппа установлены!")
+            logger.info(f"Updated sub_group={sub_group_number} for user_id={callback.from_user.id}")
 
             await commands.sendProfileCommand(bot, message)
+
         case _:
-            logging.warning(f"Wrong case: {callback.text}")
+            logger.warning(f"Wrong case in textCallbackHandler: {callback.text!r}")
 
 
 async def buttonsCallback(callback, bot: AsyncTeleBot):
     """
     Handles the callback queries for the buttons.
-
-    The callback queries are handled using pattern matching. The data of the
-    callback query is split by spaces and the first element is used to determine
-    which handler to call.
-
-    Args:
-        callback (CallbackQuery): The callback query object
-
-    Returns:
-        None
+    Routes based on callback.data.
     """
+    logger.info(f"buttonsCallback invoked: user_id={callback.from_user.id}, data={callback.data!r}")
+
     match callback.data.split(" "):
-        # If the callback query is for the start button
         case ['start']:
-            # Call the back command
+            logger.debug("Button 'start' pressed")
             await commands.backCommand(bot, callback.message)
 
-        # If the callback query is for the parse day button
         case ['parseDay', *args]:
-            # Call the date command with the argument from the callback query
-            await commands.dateCommand(bot, callback.message, args[0])
+            date_arg = args[0] if args else None
+            logger.debug(f"Button 'parseDay' pressed with arg={date_arg}")
+            await commands.dateCommand(bot, callback.message, date_arg)
 
-        # If the callback query is for the parse week button
         case ['parseWeek', *args]:
-            # Call the week command with the argument from the callback query
-            await commands.weekCommand(bot, callback.message, args[0])
+            date_arg = args[0] if args else None
+            logger.debug(f"Button 'parseWeek' pressed with arg={date_arg}")
+            await commands.weekCommand(bot, callback.message, date_arg)
 
-        # If the callback query is for the show profile button
         case ['showProfile']:
-            # Call the send profile command with the callback query message
+            logger.debug("Button 'showProfile' pressed")
             await commands.sendProfileCommand(bot, callback.message)
 
-        # If the callback query is for the configure group button
         case ['configureGroup']:
-            # Call the set group command with the reply to message from the callback query
+            logger.debug("Button 'configureGroup' pressed")
             await commands.setGroupCommand(bot, callback.message.reply_to_message)
 
-        # If the callback query is for the configure sub group button
         case ['configureSubGroup']:
-            # Call the send profile command with the callback query message
+            logger.debug("Button 'configureSubGroup' pressed")
             await commands.setSubGroupCommand(bot, callback.message)
 
-        # If the callback query is for the set group button
         case ['setGroup', *args]:
+            if len(args) < 2:
+                logger.error(f"setGroup callback missing arguments: {args}")
+                return
             try:
-                # Convert the first argument to an integer
                 group = int(args[0])
-                # Call the set group command with the callback query and the arguments
-                await commands.setGroup(bot, callback, group, args[1])
-                # Call the back command with the additional message
+                label = args[1]
+                logger.debug(f"Button 'setGroup' pressed with group={group}, label={label}")
+                await commands.setGroup(bot, callback, group, label)
                 await commands.setSubGroupCommand(bot, callback.message)
-            except ValueError:
-                # If the conversion to an integer fails, return
+            except ValueError as e:
+                logger.error(f"Invalid group id in setGroup callback: {args[0]!r} – {e}")
                 return
 
-        # If the callback query is not for any of the above handlers
         case _:
-            # Print a message indicating that the callback query is not supported
-            logging.warn(f"Wrong comand {callback.data}")
+            logger.warning(f"Unsupported callback data: {callback.data!r}")
 
 
 def register_handlers(bot: AsyncTeleBot):
-    logging.info("Registering handlers...")
+    logger.info("Registering handlers with the bot")
     bot.register_message_handler(textCallbackHandler, pass_bot=True)
-    bot.register_callback_query_handler(callback = buttonsCallback, func = callbackFilter, pass_bot=True)
+    bot.register_callback_query_handler(callback=buttonsCallback, func=callbackFilter, pass_bot=True)
+    logger.info("Handlers registered successfully")
