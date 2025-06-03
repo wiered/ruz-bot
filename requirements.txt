@@ -7,10 +7,15 @@ certifi==2024.7.4
 charset-normalizer==3.3.2
 dnspython==2.6.1
 frozenlist==1.4.1
+greenlet==3.2.2
 idna==3.8
 multidict==6.0.5
+psycopg2==2.9.10
 pymongo==4.8.0
 pyTelegramBotAPI==4.22.1
+python-dotenv==1.1.0
 requests==2.32.3
+SQLAlchemy==2.0.41
+typing_extensions==4.14.0
 urllib3==2.2.2
 yarl==1.9.4
