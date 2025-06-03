@@ -685,5 +685,21 @@ class DataBase:
         logger.debug("getAllGroupsList called")
         return self.getGroupsList()
 
+    def getAllGroupsListFromMongo(self) -> List[str]:
+        """
+        Return a list of all group_ids present in MongoDB lessons database.
+        В MongoDB каждая группа хранится как отдельная коллекция в базе _mongo_lessons_db.
+        """
+        logger.debug("getAllGroupsListFromMongo called")
+        try:
+            # list_collection_names() возвращает список имён всех коллекций
+            collections = self._mongo_lessons_db.list_collection_names()
+            # Обычно имена коллекций — это строки вида "<group_id>", поэтому возвращаем их «как есть»
+            logger.info(f"Found {len(collections)} group collections in Mongo: {collections}")
+            return collections
+        except Exception as e:
+            logger.error(f"Error fetching group list from Mongo: {e}", exc_info=True)
+            return []
+
 
 db = DataBase()
