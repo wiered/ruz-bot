@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime, timedelta
+import random
 
 from dotenv import load_dotenv
 
@@ -38,25 +39,23 @@ async def parseMonthlyScheduleForGroups() -> None:
     groups_count = len(groups)
     logger.debug(f"Found {groups_count} groups to check")
 
-    max_concurrent_tasks = int(os.environ.get("MAX_WORKERS", "5"))
+    max_concurrent_tasks = int(os.environ.get("MAX_WORKERS", "2"))
     logger.info(f"Limiting to {max_concurrent_tasks} concurrent workers")
     sem = asyncio.Semaphore(max_concurrent_tasks)
 
     async def worker(group_id: str):
-        """
-        Worker task that fetches and saves schedule for a single group.
-        """
         async with sem:
-            logger.debug(f"Starting parse for group {group_id}")
+            jitter = random.uniform(7, 10)
+            logger.debug(f"Worker for group {group_id}: sleeping jitter {jitter:.2f}s before request")
+            await asyncio.sleep(jitter)
+
             try:
                 last_update = db.getGroupLastUpdateTime(group_id)
                 elapsed = (datetime.now() - last_update).total_seconds()
                 logger.debug(f"Group {group_id}: last update was {elapsed:.0f} seconds ago")
 
                 if elapsed < 3600:
-                    logger.info(
-                        f"Skipping {group_id}: last update was {elapsed/60:.1f} minutes ago"
-                    )
+                    logger.info(f"Skipping {group_id}: last update was {elapsed/60:.1f} minutes ago")
                     return
 
                 logger.info(f"Parsing schedule for group {group_id}")
