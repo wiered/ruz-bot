@@ -15,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
     or_,
+    BigInteger
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -64,7 +65,7 @@ class Group(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)  # Telegram user_id
+    id = Column(BigInteger, primary_key=True, index=True)  # Telegram user_id
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     group_name = Column(String, nullable=False)
     sub_group = Column(Integer, nullable=True)

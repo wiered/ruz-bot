@@ -3,6 +3,7 @@ import calendar
 import logging
 from datetime import datetime, timedelta
 from typing import List
+import calendar
 
 import aiohttp
 import requests
@@ -38,14 +39,35 @@ class RuzParser:
         Returns:
             dict: The JSON data as a dictionary.
         """
-        logger.debug(f"Fetching URL: {url}")
-        async with client.get(url=url, ssl=ssl) as resp:
-            if resp.status != 200:
-                logger.error(f"Failed to fetch {url}: HTTP {resp.status}")
+        max_retries = 5
+        backoff = 1  # initial backoff in seconds
+
+        for attempt in range(1, max_retries + 1):
+            logger.debug(f"[Attempt {attempt}] Fetching URL: {url}")
+            async with client.get(url=url, ssl=ssl) as resp:
+                status = resp.status
+
+                if status == 200:
+                    data = await resp.json(encoding="Windows-1251")
+                    logger.debug(f"Successfully received data ({len(str(data))} bytes) from {url}")
+                    return data
+
+                if status == 429:
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after is not None and retry_after.isdigit():
+                        delay = int(retry_after)
+                        logger.warning(f"Received 429, Retry-After={delay}s; sleeping {delay}s")
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.warning(f"Received 429 without Retry-After; sleeping {backoff}s")
+                        await asyncio.sleep(backoff)
+                        backoff *= 2
+                    continue  # retry loop
+
+                logger.error(f"Failed to fetch {url}: HTTP {status}")
                 resp.raise_for_status()
-            data = await resp.json(encoding="Windows-1251")
-            logger.debug(f"Received data from {url}: {len(str(data))} bytes")
-            return data
+
+        raise aiohttp.ClientError(f"Exceeded {max_retries} retries for URL: {url}")
 
     async def parse(self, group: str, start_date: str, end_date: str) -> dict:
         """
@@ -135,31 +157,32 @@ class RuzParser:
 
         start_str = first_prev_month.strftime("%Y.%m.%d")
         end_str = last_next_month.strftime("%Y.%m.%d")
-        update_time = datetime.now()
+        update_time = datetime.now().isoformat()
 
-        logger.debug(f"Month bounds for {group_id}: start={start_str}, end={end_str}, update_time={update_time}")
-        lessons_for_this_month: List[dict] = await self.parse(group_id, start_str, end_str)
-        logger.debug(f"Fetched {len(lessons_for_this_month)} raw lessons for {group_id}")
+        logger.debug(
+            f"Month bounds for {group_id}: start={start_str}, end={end_str}, update_time={update_time}"
+            )
+        raw = await self.parse(group_id, start_str, end_str)
 
         processed = []
-        for lesson in lessons_for_this_month:
+        for lesson in raw:
             subgroup = 0
             list_sub = lesson.get("listSubGroups", [])
-            if len(list_sub) > 0:
+            if list_sub:
                 subgroup = int(list_sub[0].get("subgroup")[-1])
 
             lesson["group_id"] = group_id
             lesson["subgroup"] = subgroup
-            lesson["update_time"] = update_time.isoformat()
-
+            lesson["update_time"] = update_time
             processed.append(lesson)
 
-        if len(processed) < 1:
+        if not processed:
             logger.warning(f"No lessons returned for group {group_id}")
-            return []
+        else:
+            logger.info(f"parseSchedule completed with {len(processed)} lessons for {group_id}")
 
-        logger.info(f"parseSchedule completed with {len(processed)} lessons for {group_id}")
         return processed
+
 
     async def search_group(self, group_name: str) -> List[dict]:
         """
