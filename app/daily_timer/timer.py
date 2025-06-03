@@ -1,9 +1,27 @@
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
+
+from dotenv import load_dotenv
 
 from db import db
 from ruzparser import RuzParser
+
+# --------------------
+# Logging Configuration
+# --------------------
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+logger.propagate = False
+
+load_dotenv()
 
 
 class Timer:
@@ -23,93 +41,118 @@ class Timer:
         """
         self._timeout = timeout
         self._callback = callback
+        logger.debug(f"Timer initialized with timeout={timeout} seconds, callback={callback.__name__}")
         self._task = asyncio.ensure_future(self._job())
 
     async def _job(self):
         """
         Wait for the timeout and call the callback.
         """
+        logger.info(f"Timer sleeping for {self._timeout} seconds before executing callback")
         await asyncio.sleep(self._timeout)
-        await self._callback()
+        logger.info(f"Timer executing callback {self._callback.__name__}")
+        try:
+            await self._callback()
+            logger.info(f"Callback {self._callback.__name__} completed successfully")
+        except Exception as e:
+            logger.error(f"Error in callback {self._callback.__name__}: {e}", exc_info=True)
 
     def cancel(self):
         """
         Cancel the timer and stop the callback from being called.
         """
         self._task.cancel()
+        logger.info("Timer canceled")
 
 
 async def parseMonthlyScheduleForGroups() -> None:
     """
     Parse the schedule for all groups and update the
-        database if it's been more than an hour since the last update.
+    database if it's been more than an hour since the last update.
     """
-    logging.info("Updating schedules...")
+    logger.info("parseMonthlyScheduleForGroups started: Updating schedules for all groups")
     await asyncio.sleep(0.1)
 
-    # Create parser object
     parser = RuzParser()
 
-    # get all groups from database
-    groups = db.getAllGroupsList()
+    groups = db.getAllGroupsListFromMongo()
     groups_count = len(groups)
+    logger.debug(f"Found {groups_count} groups to check")
 
-    for num, group in enumerate(groups):
-        # Get the last update time from the database
+    for num, group in enumerate(groups, start=1):
+        logger.debug(f"Processing group {group} ({num}/{groups_count})")
         last_update = db.getGroupLastUpdateTime(group)
+        elapsed = (datetime.now() - last_update).total_seconds()
+        logger.debug(f"Group {group} last update at {last_update} ({elapsed:.0f} seconds ago)")
 
-        # If group schedule is updated less than a hour ago, skip updating
-        if (datetime.now() - last_update).seconds < 3600:
+        if elapsed < 3600:
+            logger.info(f"Skipping group {group}: last update was {elapsed/60:.1f} minutes ago")
             continue
 
-        # If the group has less than 3 users, delete the schedule
-        if db.getUserCountByGroup(group) <= 3:
-            db.deleteScheduleFromDB(group)
-            continue
+        # user_count = db.getUserCountByGroup(group)
+        # logger.debug(f"Group {group} has {user_count} users")
+        # if user_count <= 3:
+        #     logger.info(f"Deleting schedule for group {group} because user count ({user_count}) ≤ 3")
+        #     db.deleteScheduleFromDB(group)
+        #     continue
 
-        logging.info(f"Parsing... {group} ({num+1}/{groups_count})")
-        lessons_for_group = await parser.parseSchedule(group)
-        db.saveScheduleToDB(group, lessons_for_group)
+        logger.info(f"Parsing schedule for group {group} ({num}/{groups_count})")
+        try:
+            lessons_for_group = await parser.parseSchedule(group)
+            logger.debug(f"Fetched {len(lessons_for_group)} lessons from parser for group {group}")
+            db.saveScheduleToDB(group, lessons_for_group)
+            logger.info(f"Saved schedule for group {group} to database")
+        except Exception as e:
+            logger.error(f"Error parsing schedule for group {group}: {e}", exc_info=True)
+
+        logger.debug("Sleeping 20 seconds before next group")
         await asyncio.sleep(20)
 
-    return
+    logger.info("parseMonthlyScheduleForGroups completed")
 
-async def sleepUntilMidnight() -> None:
-    nowtime = datetime.now()
-    tomorrow = (nowtime + timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-        )
-    seconds_until_midnight = (tomorrow - nowtime).total_seconds()
-    print(f"Sleeping for {seconds_until_midnight:.2f} seconds until midnight...")
-    await asyncio.sleep(seconds_until_midnight)
 
 async def timerPooling() -> None:
     """
     Main function for the timer pool.
-    It runs in an infinite loop and creates a new Timer every 60 seconds.
-    The Timer calls the isParsingTime function after 60 seconds.
-
-    The loop can be stopped with Ctrl+C.
+    It schedules parseMonthlyScheduleForGroups once per day at the hour/minute specified
+    in the .env as TIMER_HOUR and TIMER_MINUTE.
     """
-    polling = True
-    logging.debug("Timer started")
+    # Read desired hour and minute from environment
     try:
-        await sleepUntilMidnight()
+        hour = int(os.environ.get("TIMER_HOUR", "0"))
+        minute = int(os.environ.get("TIMER_MINUTE", "0"))
+        logger.debug(f"Loaded TIMER_HOUR={hour}, TIMER_MINUTE={minute} from .env")
+    except ValueError:
+        logger.error("Invalid TIMER_HOUR or TIMER_MINUTE in .env; defaulting to 0:0")
+        hour, minute = 0, 0
 
-        while polling:
-            # Waiting until midnight
-            await sleepUntilMidnight()
+    logger.info("timerPooling started")
+    try:
+        while True:
+            now = datetime.now()
+            # Determine next run time
+            next_run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if next_run <= now:
+                next_run += timedelta(days=1)
+            sleep_seconds = (next_run - now).total_seconds()
+            logger.info(f"Sleeping for {sleep_seconds:.0f} seconds until next run at {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+            try:
+                await asyncio.sleep(sleep_seconds)
+            except asyncio.CancelledError:
+                logger.warning("timerPooling sleep canceled before scheduled run")
+                break
 
-            # Create a new Timer that calls parseMonthlyScheduleForGroups after 60 seconds
-            timer = Timer(60, parseMonthlyScheduleForGroups)
+            # Execute the parsing job
+            logger.info(f"Running scheduled parse at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            try:
+                await parseMonthlyScheduleForGroups()
+            except Exception as e:
+                logger.error(f"Error during scheduled parseMonthlyScheduleForGroups: {e}", exc_info=True)
 
-            # Sleeping 60 seconds for no reason
-            await asyncio.sleep(60)
-
+            # After running, loop back to calculate the next_run for tomorrow
     except KeyboardInterrupt:
-        # If the user stops the program with Ctrl+C, exit the loop
-        return
+        logger.info("timerPooling stopped by KeyboardInterrupt")
+    except Exception as e:
+        logger.error(f"Unexpected error in timerPooling: {e}", exc_info=True)
     finally:
-        # Stop the loop and exit the function
-        polling = False
-        return
+        logger.info("timerPooling exiting")
