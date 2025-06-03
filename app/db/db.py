@@ -693,11 +693,10 @@ class DataBase:
         """
         logger.debug("getAllGroupsListFromMongo called")
         try:
-            # list_collection_names() возвращает список имён всех коллекций
-            collections = self._mongo_lessons_db.list_collection_names()
-            # Обычно имена коллекций — это строки вида "<group_id>", поэтому возвращаем их «как есть»
-            logger.info(f"Found {len(collections)} group collections in Mongo: {collections}")
-            return collections
+            distinct_ids = self._mongo_users.distinct("group_id")
+            result = [str(gid) for gid in distinct_ids]
+            logger.info(f"Found {len(result)} distinct group_id(s) in Mongo users")
+            return result
         except Exception as e:
             logger.error(f"Error fetching group list from Mongo: {e}", exc_info=True)
             return []
