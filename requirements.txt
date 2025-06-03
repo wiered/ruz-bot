@@ -10,7 +10,7 @@ frozenlist==1.4.1
 greenlet==3.2.2
 idna==3.8
 multidict==6.0.5
-psycopg2==2.9.10
+psycopg2-binary==2.9.10
 pymongo==4.8.0
 pyTelegramBotAPI==4.22.1
 python-dotenv==1.1.0
