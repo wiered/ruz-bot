@@ -3,6 +3,7 @@ import calendar
 import logging
 from datetime import datetime, timedelta
 from typing import List
+import calendar
 
 import aiohttp
 import requests
@@ -135,31 +136,32 @@ class RuzParser:
 
         start_str = first_prev_month.strftime("%Y.%m.%d")
         end_str = last_next_month.strftime("%Y.%m.%d")
-        update_time = datetime.now()
+        update_time = datetime.now().isoformat()
 
-        logger.debug(f"Month bounds for {group_id}: start={start_str}, end={end_str}, update_time={update_time}")
-        lessons_for_this_month: List[dict] = await self.parse(group_id, start_str, end_str)
-        logger.debug(f"Fetched {len(lessons_for_this_month)} raw lessons for {group_id}")
+        logger.debug(
+            f"Month bounds for {group_id}: start={start_str}, end={end_str}, update_time={update_time}"
+            )
+        raw = await self.parse(group_id, start_str, end_str)
 
         processed = []
-        for lesson in lessons_for_this_month:
+        for lesson in raw:
             subgroup = 0
             list_sub = lesson.get("listSubGroups", [])
-            if len(list_sub) > 0:
+            if list_sub:
                 subgroup = int(list_sub[0].get("subgroup")[-1])
 
             lesson["group_id"] = group_id
             lesson["subgroup"] = subgroup
-            lesson["update_time"] = update_time.isoformat()
-
+            lesson["update_time"] = update_time
             processed.append(lesson)
 
-        if len(processed) < 1:
+        if not processed:
             logger.warning(f"No lessons returned for group {group_id}")
-            return []
+        else:
+            logger.info(f"parseSchedule completed with {len(processed)} lessons for {group_id}")
 
-        logger.info(f"parseSchedule completed with {len(processed)} lessons for {group_id}")
         return processed
+
 
     async def search_group(self, group_name: str) -> List[dict]:
         """
