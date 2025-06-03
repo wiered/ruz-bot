@@ -34,6 +34,9 @@ async def parseMonthlyScheduleForGroups() -> None:
 
     parser = RuzParser()
 
+    parsed_groups = []
+    failed_groups = []
+
     groups = db.getAllGroupsListFromMongo() + db.getGroupsList()
     groups = list(dict.fromkeys(groups))
     groups_count = len(groups)
@@ -62,16 +65,23 @@ async def parseMonthlyScheduleForGroups() -> None:
                 lessons = await parser.parseSchedule(group_id)
                 if lessons:
                     db.saveScheduleToDB(group_id, lessons)
+                    parsed_groups.append(group_id)
                     logger.info(f"Saved {len(lessons)} lessons for {group_id} to database")
                 else:
+                    failed_groups.append((group_id, "no lessons"))
                     logger.warning(f"No lessons returned for group {group_id}")
             except Exception as exc:
+                failed_groups.append((group_id, exc))
                 logger.error(f"Error parsing group {group_id}: {exc}", exc_info=True)
 
     tasks = [asyncio.create_task(worker(g)) for g in groups]
     await asyncio.gather(*tasks)
 
     logger.info("parseMonthlyScheduleForGroups: All groups processed")
+    logger.debug(f"parseMonthlyScheduleForGroups: {len(parsed_groups)} groups parsed, {len(failed_groups)} failed")
+    logger.exception("Failed groups:")
+    for group in failed_groups:
+        logger.exception(f"Group: {group[0]}, Reason: {group[1]}")
 
 
 async def timerPooling() -> None:
