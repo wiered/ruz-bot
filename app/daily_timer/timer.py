@@ -75,7 +75,7 @@ async def parseMonthlyScheduleForGroups() -> None:
 
     parser = RuzParser()
 
-    groups = db.getAllGroupsList()
+    groups = db.getAllGroupsListFromMongo()
     groups_count = len(groups)
     logger.debug(f"Found {groups_count} groups to check")
 
