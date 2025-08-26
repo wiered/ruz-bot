@@ -23,9 +23,10 @@ cd ruz-bot
     The file should look like this
 ```.env
 BOT_TOKEN=your-bot-token-here
-ADMIN_ID=your-id
-MONGODB_ADRESS=mongodb://ip:port
-DOUPDATE=1 # 1 if want update on start
+POSTGRESQL_URL=postgresql_uri
+DOUPDATE=1 # 1 if want update on start 0 else
+TIMER_HOUR=4
+TIMER_MINUTE=31
 ```
 
 5. Build Docker image
