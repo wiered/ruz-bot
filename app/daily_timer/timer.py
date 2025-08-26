@@ -37,7 +37,7 @@ async def parseMonthlyScheduleForGroups() -> None:
     parsed_groups = []
     failed_groups = []
 
-    groups = db.getAllGroupsListFromMongo() + db.getGroupsList()
+    groups = db.getGroupsList()
     groups = list(dict.fromkeys(groups))
     groups_count = len(groups)
     logger.debug(f"Found {groups_count} groups to check")

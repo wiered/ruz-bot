@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from sqlalchemy import (
     create_engine,
     Column,
@@ -98,13 +97,6 @@ Base.metadata.create_all(bind=engine)
 class DataBase:
     def __init__(self):
         logger.info("Initializing DataBase instance")
-        # MongoDB setup
-        mongo_addr = os.environ.get("MONGODB_ADRESS")
-        logger.debug(f"Connecting to MongoDB at {mongo_addr}")
-        self._mongo_client = MongoClient(mongo_addr, connect=True)
-        self._mongo_users_db = self._mongo_client.ruzbotdb
-        self._mongo_users = self._mongo_users_db.users
-        self._mongo_lessons_db = self._mongo_client["ruz-bot-lessons"]
 
         # PostgreSQL session
         self._Session = SessionLocal
@@ -134,74 +126,13 @@ class DataBase:
             logger.debug(f"Group {group_id} already exists")
         return grp
 
-    def _migrate_user_from_mongo(self, session, user_id: int) -> Optional[User]:
-        """
-        If the user is not in Postgres but exists in Mongo, migrate them.
-        Returns the User object in Postgres, or None if not in Mongo.
-        """
-        logger.debug(f"_migrate_user_from_mongo called for user_id={user_id}")
-        # Check if exists in Postgres
-        existing = session.query(User).filter_by(id=user_id).first()
-        if existing:
-            logger.debug(f"User {user_id} already exists in Postgres")
-            return existing
-
-        # Fetch from Mongo
-        mongo_user = self._mongo_users.find_one({"id": user_id})
-        if not mongo_user:
-            logger.debug(f"User {user_id} not found in MongoDB")
-            return None
-
-        mongo_group_id = mongo_user.get("group_id")
-        mongo_group_name = mongo_user.get("group_name", "")
-        logger.info(f"Migrating user {user_id} from Mongo to Postgres; group_id={mongo_group_id}, group_name='{mongo_group_name}'")
-        # Ensure user's group exists in Postgres
-        self._ensure_group_in_postgres(session, mongo_group_id, mongo_group_name)
-
-        # Create User in Postgres
-        new_user = User(
-            id=mongo_user["id"],
-            group_id=mongo_group_id,
-            group_name=mongo_group_name,
-            sub_group=mongo_user.get("sub_group"),
-        )
-        session.add(new_user)
-        session.commit()
-        logger.info(f"User {user_id} migrated to Postgres")
-        return new_user
-
-    # --------------------
-    # Public Properties
-    # --------------------
-
-    @property
-    def client(self):
-        logger.debug("Mongo client accessed")
-        return self._mongo_client
-
-    @property
-    def users(self):
-        """
-        Return the MongoDB users collection.
-        """
-        logger.debug("MongoDB users collection accessed")
-        return self._mongo_users
-
-    @property
-    def lessons(self):
-        """
-        Return the MongoDB lessons DB handle (each group is a collection).
-        """
-        logger.debug("MongoDB lessons DB handle accessed")
-        return self._mongo_lessons_db
-
     # --------------------
     # User-related Methods
     # --------------------
 
     def isUserKnown(self, user_id: int) -> bool:
         """
-        Returns True if the user is known in either Postgres (preferred) or Mongo (and migrates them).
+        Returns True if the user is known.
         """
         logger.debug(f"isUserKnown called for user_id={user_id}")
         session = self._get_pg_session()
@@ -212,14 +143,7 @@ class DataBase:
                 logger.debug(f"User {user_id} found in Postgres")
                 return True
 
-            # If not in Postgres, check Mongo
-            mongo_user = self._mongo_users.find_one({"id": user_id})
-            if mongo_user:
-                logger.debug(f"User {user_id} found in Mongo; migrating to Postgres")
-                self._migrate_user_from_mongo(session, user_id)
-                return True
-
-            logger.debug(f"User {user_id} not found in either DB")
+            logger.debug(f"User {user_id} not found")
             return False
         finally:
             session.close()
@@ -229,7 +153,6 @@ class DataBase:
         """
         Checks if a user has a subgroup in the database.
         Returns True if sub_group is not None, False otherwise.
-        If user is not in Postgres, attempt migration from Mongo.
         """
         logger.debug(f"isUserHasSubGroup called for user_id={user_id}")
         session = self._get_pg_session()
@@ -237,11 +160,8 @@ class DataBase:
         try:
             user = session.query(User).filter_by(id=user_id).first()
             if not user:
-                logger.debug(f"User {user_id} not in Postgres; trying migration")
-                user = self._migrate_user_from_mongo(session, user_id)
-                if not user:
-                    logger.debug(f"User {user_id} not found in Mongo either; returning False")
-                    return False
+                logger.debug(f"User {user_id} not found")
+                return False
 
             logger.debug(f"[isUserHasSubGroup] user_id={user_id}, sub_group={user.sub_group!r}")
             if user.sub_group is not None:
@@ -255,18 +175,15 @@ class DataBase:
     def getUser(self, user_id: int) -> Optional[dict]:
         """
         Return the user as a dict: {"id": ..., "group_id": ..., "group_name": ..., "sub_group": ...}
-        If not present in Postgres, migrate from Mongo if possible.
         """
         logger.debug(f"getUser called for user_id={user_id}")
         session = self._get_pg_session()
         try:
             user = session.query(User).filter_by(id=user_id).first()
             if not user:
-                logger.debug(f"User {user_id} not in Postgres; trying migration")
-                user = self._migrate_user_from_mongo(session, user_id)
-                if not user:
-                    logger.debug(f"User {user_id} not found in Mongo; returning None")
-                    return None
+                logger.debug(f"User {user_id} not found")
+                return None
+
             result = {
                 "id": user.id,
                 "group_id": user.group_id,
@@ -307,12 +224,9 @@ class DataBase:
         try:
             user = session.query(User).filter_by(id=user_id).first()
             if not user:
-                logger.debug(f"User {user_id} not in Postgres; trying migration")
-                user = self._migrate_user_from_mongo(session, user_id)
-                if not user:
-                    logger.debug(f"User {user_id} not found in Mongo; creating new user")
-                    self.addUser(user_id, group_id, group_name, sub_group)
-                    return
+                logger.debug(f"User {user_id} not found; creating new user")
+                self.addUser(user_id, group_id, group_name, sub_group)
+                return
 
             # Ensure group exists
             self._ensure_group_in_postgres(session, group_id, group_name)
@@ -336,11 +250,9 @@ class DataBase:
         try:
             user = session.query(User).filter_by(id=user_id).first()
             if not user:
-                logger.debug(f"User {user_id} not in Postgres; trying migration")
-                user = self._migrate_user_from_mongo(session, user_id)
-                if not user:
-                    logger.warning(f"User {user_id} not found anywhere; cannot update sub_group")
-                    return
+                logger.warning(f"User {user_id} not found anywhere; cannot update sub_group")
+                return
+
             user.sub_group = sub_group
             session.commit()
             logger.info(f"User {user_id} sub_group updated to {sub_group}")
@@ -368,7 +280,6 @@ class DataBase:
 
     def isGroupInDB(self, group_id: str) -> bool:
         """
-        In Mongo: checks if a collection named str(group_id) exists.
         In Postgres: we interpret "group cached" to mean: lessons exist for that group.
         """
         logger.debug(f"isGroupInDB called for group_id={group_id}")
@@ -383,17 +294,11 @@ class DataBase:
             session.close()
             logger.debug("PostgreSQL session closed in isGroupInDB")
 
-        # Fallback: check Mongo collections
-        in_mongo = str(group_id) in self._mongo_lessons_db.list_collection_names()
-        logger.debug(f"Group {group_id} in Mongo collections: {in_mongo}")
-        return in_mongo
-
     def isDateRangeInDB(self, group_id: str, start: datetime, end: datetime) -> bool:
         """
         Check if the group's lessons are "cached" and date range [start, end] lies between
         previous-month-start and next-month-end relative to today.
-        Same logic as in Mongo version, but "is cached" means either Postgres has any lessons for group,
-        or Mongo has a collection for that group.
+        Same logic as in Mongo version, but "is cached" means either Postgres has any lessons for group.
         """
         logger.debug(f"isDateRangeInDB called for group_id={group_id}, start={start}, end={end}")
         # If group not cached at all, return False
@@ -539,9 +444,6 @@ class DataBase:
                 user_pg = session.query(User).filter_by(group_id=group_id).first()
                 if user_pg:
                     grp_name = user_pg.group_name
-                else:
-                    mongo_user = self._mongo_users.find_one({"group_id": group_id})
-                    grp_name = mongo_user.get("group_name", "") if mongo_user else ""
                 logger.info(f"Creating Group {group_id} for schedule save with name '{grp_name}'")
                 grp = Group(id=group_id, name=grp_name)
                 session.add(grp)
@@ -685,21 +587,5 @@ class DataBase:
         """
         logger.debug("getAllGroupsList called")
         return self.getGroupsList()
-
-    def getAllGroupsListFromMongo(self) -> List[str]:
-        """
-        Return a list of all group_ids present in MongoDB lessons database.
-        В MongoDB каждая группа хранится как отдельная коллекция в базе _mongo_lessons_db.
-        """
-        logger.debug("getAllGroupsListFromMongo called")
-        try:
-            distinct_ids = self._mongo_users.distinct("group_id")
-            result = [str(gid) for gid in distinct_ids]
-            logger.info(f"Found {len(result)} distinct group_id(s) in Mongo users")
-            return result
-        except Exception as e:
-            logger.error(f"Error fetching group list from Mongo: {e}", exc_info=True)
-            return []
-
 
 db = DataBase()
