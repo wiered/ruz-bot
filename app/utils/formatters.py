@@ -101,7 +101,7 @@ def formatDayMessage(data, date):
     date = date.strftime('%d.%m')
 
     if len(data) == 0:
-        return escapeMessage(f"= {week_day} ({date}) = \n\nПар нет")
+        return escapeMessage(f"= {week_day} ({date}) = \n\nПар нет\n\n")
 
     lessons = ""
     for lesson in data:
@@ -121,7 +121,7 @@ def formatWeekMessage(data):
         str: Formatted message
     """
     if len(data) == 0:
-        return "Пар нет"
+        return "Пар нет\n\n"
 
     dates = {
     }
