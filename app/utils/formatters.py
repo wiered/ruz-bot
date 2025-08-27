@@ -110,7 +110,7 @@ def formatDayMessage(data, date):
     return escapeMessage(f"= {week_day} ({date}) = \n{lessons}")
 
 
-def formatWeekMessage(data):
+def formatWeekMessage(date, data):
     """
     Format message for group for one week
 
@@ -121,7 +121,7 @@ def formatWeekMessage(data):
         str: Formatted message
     """
     if len(data) == 0:
-        return "Пар нет\n\n"
+        return f"Неделя {date.date()}:\nПар нет\n\n"
 
     dates = {
     }
