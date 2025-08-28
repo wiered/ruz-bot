@@ -14,11 +14,11 @@ git clone https://github.com/wiered/ruz-bot.git
 cd ruz-bot
 ```
 
-3. Run your own MongoDB localy or host it somewhere
+3. Run your own POSTGRESQL localy or host it somewhere
 
-    Guide: https://www.mongodb.com/
+    Docs: https://www.postgresql.org/docs/17/index.html
 
-4. Create .env and add BOT_TOKEN, ADMIN_ID and MONGODB_ADRESS
+4. Create .env
 
     The file should look like this
 ```.env

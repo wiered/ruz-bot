@@ -118,7 +118,7 @@ async def weekCommand(bot, message, _timedelta):
         parser = RuzParser()
         data = await parser.parseWeek(group_id, date)
 
-    reply_message = formatters.formatWeekMessage(data) + formatters.escapeMessage(f"Последнее обновление: {last_update}")
+    reply_message = formatters.formatWeekMessage(date, data) + formatters.escapeMessage(f"Последнее обновление: {last_update}")
     logger.debug(f"Formatted week message length: {len(reply_message)} characters")
 
     prev_week = delta_weeks - 1
