@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from daters import getStartAndEndOfWeek
+from utils.daters import getStartAndEndOfWeek
 
 LESSON_NUMBER_DICT = {
     "08:30": 1,
