@@ -121,9 +121,9 @@ def formatWeekMessage(date, data):
         str: Formatted message
     """
     if len(data) == 0:
-        week_start = escapeMessage(date.date().strftime('%d.%m'))
-        week_end = escapeMessage((date.date() + timedelta(days=7)).strftime('%d.%m'))
-        return f"== Расписание на неделю {week_start} \- {week_end} == \n\nПар нет\n\n"
+        week_start = date.date().strftime('%d.%m')
+        week_end = (date.date() + timedelta(days=7)).strftime('%d.%m')
+        return escapeMessage(f"== Расписание на неделю {week_start} - {week_end} == \n\nПар нет\n\n")
 
     dates = {
     }
