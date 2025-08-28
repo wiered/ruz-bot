@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from daters import getStartAndEndOfWeek
+
 LESSON_NUMBER_DICT = {
     "08:30": 1,
     "10:10": 2,
@@ -110,7 +112,7 @@ def formatDayMessage(data, date):
     return escapeMessage(f"= {week_day} ({date}) = \n{lessons}")
 
 
-def formatWeekMessage(date, data):
+def formatWeekMessage(date: datetime, data: dict):
     """
     Format message for group for one week
 
@@ -121,8 +123,9 @@ def formatWeekMessage(date, data):
         str: Formatted message
     """
     if len(data) == 0:
-        week_start = date.date().strftime('%d.%m')
-        week_end = (date.date() + timedelta(days=7)).strftime('%d.%m')
+        week_start, week_end = getStartAndEndOfWeek(date)
+        week_start = week_start.strftime('%d.%m')
+        week_end = week_end.strftime('%d.%m')
         return escapeMessage(f"== Расписание на неделю {week_start} - {week_end} == \n\nПар нет\n\n")
 
     dates = {
