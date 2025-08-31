@@ -7,7 +7,7 @@ from db import db
 from ruzbot import markups
 
 
-__version__ = '03.06.25'
+__version__ = '31.08.25'
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 class RuzBot(AsyncTeleBot):

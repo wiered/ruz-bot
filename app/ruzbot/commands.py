@@ -57,7 +57,7 @@ async def dateCommand(bot, message, date: str):
     else:
         logger.info(f"Day {target_date.date()} not in DB; parsing from site")
         parser = RuzParser()
-        data = await parser.parseDay(group_id, target_date)
+        data = await parser.parseDay(group_id, target_date, subgroup=user.get("sub_group"))
 
     reply_message = formatters.formatDayMessage(data, target_date)
     logger.debug(f"Formatted day message length: {len(reply_message)} characters")
@@ -97,6 +97,7 @@ async def weekCommand(bot, message, _timedelta):
 
     user = db.getUser(user_id)
     group_id = user.get("group_id")
+    subgroup = user.get("sub_group")
     logger.debug(f"Fetched user from DB: user_id={user_id}, group_id={group_id}, sub_group={user.get('sub_group')!r}")
 
     try:
@@ -116,9 +117,10 @@ async def weekCommand(bot, message, _timedelta):
         logger.info(f"Week starting {date.date()} not in DB; parsing from site")
         last_update = datetime.now().strftime("%d.%m %H:%M:%S")
         parser = RuzParser()
-        data = await parser.parseWeek(group_id, date)
+        data = await parser.parseWeek(group_id, date, subgroup)
 
     reply_message = formatters.formatWeekMessage(date, data) + formatters.escapeMessage(f"Последнее обновление: {last_update}")
+    reply_message = reply_message.replace("преподавател", "преподаватель")
     logger.debug(f"Formatted week message length: {len(reply_message)} characters")
 
     prev_week = delta_weeks - 1

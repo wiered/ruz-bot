@@ -2,11 +2,17 @@ import asyncio
 import logging
 import os
 
+from dotenv import load_dotenv
+
 import ruzparser
 from daily_timer import timerPooling
 from db import db
 from ruzbot import bot
 from ruzbot.handlers import register_handlers
+
+load_dotenv()
+
+DO_UPDATE = bool(int(os.environ.get("DOUPDATE")))
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -59,7 +65,7 @@ async def main():
     This function starts the bot.
     """
 
-    if int(os.environ.get("DOUPDATE")) == 1:
+    if DO_UPDATE:
         await updateLessonsSchedulesChache()
 
     # Creating tasks for bot and timer

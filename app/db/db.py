@@ -1,26 +1,15 @@
-import os
 import logging
+import os
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from dotenv import load_dotenv
-from sqlalchemy import (
-    create_engine,
-    Column,
-    Integer,
-    String,
-    Date,
-    DateTime,
-    ForeignKey,
-    JSON,
-    or_,
-    BigInteger
-)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-
 import utils
-
+from dotenv import load_dotenv
+from sqlalchemy import (JSON, BigInteger, Column, Date, DateTime, ForeignKey,
+                        Integer, String, create_engine, or_)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 
 # --------------------
 # Logging Configuration
@@ -352,7 +341,6 @@ class DataBase:
             lessons = (
                 session.query(Lesson)
                 .filter_by(group_id=group_id)
-                .order_by(Lesson.update_time.desc())
                 .all()
             )
             data_list = [lesson.data for lesson in lessons]
@@ -385,6 +373,25 @@ class DataBase:
             session.close()
             logger.debug("PostgreSQL session closed in getGroupLastUpdateTime")
 
+    def _sort_by_begin_lesson(self, data):
+        return sorted(data, key=lambda x: int(x["beginLesson"][0:2]), reverse=False)
+
+    def _sort_lessons(self, data):
+        logger.debug(f"_sort_lessons called for {len(data)} lessons")
+
+        grouped = defaultdict(list)
+        for item in data:
+            grouped[item["date"]].append(item)
+
+        sorted_dates = sorted(grouped.keys(), key=lambda x: datetime.strptime(x, "%Y-%m-%d"))
+        sorted_grouped_lists = [grouped[date] for date in sorted_dates]
+
+        sorted_data = [
+            item for sublist in [self._sort_by_begin_lesson(sublist) for sublist in sorted_grouped_lists] for item in sublist
+        ]
+
+        return sorted_data
+
     def getLessonsInDateRange(
         self, group_id: str, start_date: datetime, end_date: datetime, sub_group: int
     ) -> List[dict]:
@@ -409,12 +416,12 @@ class DataBase:
                 .filter(
                     Lesson.group_id == group_id,
                     Lesson.date.between(sd, ed),
-                    or_(Lesson.subgroup == sub_group, Lesson.subgroup == 0),
+                    or_(Lesson.subgroup == sub_group, Lesson.subgroup == 0)
                 )
-                .order_by(Lesson.date.asc(), Lesson.subgroup.asc())
                 .all()
             )
-            data_list = [lesson.data for lesson in lessons]
+
+            data_list = self._sort_lessons([lesson.data for lesson in lessons])
             logger.debug(f"getLessonsInDateRange returning {len(data_list)} lessons")
             return data_list
         finally:
