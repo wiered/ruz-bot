@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from utils.daters import getStartAndEndOfWeek
@@ -20,6 +21,16 @@ WEEK_DAYS_LABEL_DICT = {
     5: "Суббота",
     6: "Воскресенье"
 }
+
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+logger.propagate = False
 
 def getDate(date: str | datetime) -> datetime:
     """
@@ -151,6 +162,9 @@ def formatWeekMessage(date: datetime, data: dict):
         lessons += dates.get(key) + "\n"
 
     if len(lessons) > 4000:
+        logger.warning("Message too long")
+        logger.debug("Message length: {}".format(len(lessons)))
+        logger.debug("Message: {}".format(lessons))
         lessons = "Message too long\n\n"
 
     return escapeMessage(lessons)
