@@ -89,7 +89,7 @@ class RuzParser:
         logger.debug(f"parse returned {len(json_data)} entries for group={group}")
         return json_data
 
-    async def parseDay(self, group: str, date: datetime) -> dict:
+    async def parseDay(self, group: str, date: datetime, subgroup: int) -> dict:
         """
         Parse schedule for group for one day
 
@@ -103,10 +103,19 @@ class RuzParser:
         date_str = date.strftime("%Y.%m.%d")
         logger.info(f"parseDay called for group={group}, date={date_str}")
         result = await self.parse(group, date_str, date_str)
+        for lesson in result:
+            subgroup_ = 0
+            list_sub = lesson.get("listSubGroups", [])
+            if list_sub:
+                subgroup_ = int(list_sub[0].get("subgroup")[-1])
+
+            lesson["subgroup"] = subgroup_
+
+        result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
         logger.debug(f"parseDay returned {len(result)} lessons for {group} on {date_str}")
         return result
 
-    async def parseWeek(self, group: str, date: datetime) -> List[dict]:
+    async def parseWeek(self, group: str, date: datetime, subgroup: int) -> List[dict]:
         """
         Parse schedule for group for one week
 
@@ -126,6 +135,15 @@ class RuzParser:
 
         logger.debug(f"Week range for {group}: {start_str} - {end_str}")
         result = await self.parse(group, start_str, end_str)
+        for lesson in result:
+            subgroup_ = 0
+            list_sub = lesson.get("listSubGroups", [])
+            if list_sub:
+                subgroup_ = int(list_sub[0].get("subgroup")[-1])
+
+            lesson["subgroup"] = subgroup_
+
+        result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
         logger.debug(f"parseWeek returned {len(result)} lessons for {group} week starting {start_str}")
         return result
 
