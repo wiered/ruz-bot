@@ -111,7 +111,8 @@ class RuzParser:
 
             lesson["subgroup"] = subgroup_
 
-        result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
+        if subgroup != 0:
+            result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
         logger.debug(f"parseDay returned {len(result)} lessons for {group} on {date_str}")
         return result
 
@@ -143,7 +144,8 @@ class RuzParser:
 
             lesson["subgroup"] = subgroup_
 
-        result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
+        if subgroup != 0:
+            result = [lesson for lesson in result if lesson["subgroup"] in (subgroup, 0)]
         logger.debug(f"parseWeek returned {len(result)} lessons for {group} week starting {start_str}")
         return result
 

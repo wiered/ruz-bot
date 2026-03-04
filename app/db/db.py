@@ -28,6 +28,9 @@ logger.propagate = False
 load_dotenv()
 # SQLAlchemy setup
 DATABASE_URL = os.environ.get("POSTGRESQL_URL")  # e.g. "postgresql+psycopg2://user:pass@host/dbname"
+# Normalize postgres:// to postgresql+psycopg2:// so SQLAlchemy 2.x can load the dialect
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 logger.debug(f"Using DATABASE_URL={DATABASE_URL}")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -411,15 +414,13 @@ class DataBase:
 
         session = self._get_pg_session()
         try:
-            lessons = (
-                session.query(Lesson)
-                .filter(
-                    Lesson.group_id == group_id,
-                    Lesson.date.between(sd, ed),
-                    or_(Lesson.subgroup == sub_group, Lesson.subgroup == 0)
-                )
-                .all()
+            query = session.query(Lesson).filter(
+                Lesson.group_id == group_id,
+                Lesson.date.between(sd, ed),
             )
+            if sub_group != 0:
+                query = query.filter(or_(Lesson.subgroup == sub_group, Lesson.subgroup == 0))
+            lessons = query.all()
 
             data_list = self._sort_lessons([lesson.data for lesson in lessons])
             logger.debug(f"getLessonsInDateRange returning {len(data_list)} lessons")
@@ -472,6 +473,8 @@ class DataBase:
                     date_obj = raw_date.date()
                 else:
                     date_obj = raw_date  # already a date
+
+                logger.debug(f"Saving lesson for group {group_id}, date_obj: {date_obj}, date: {raw_date}")
 
                 subgroup = lesson.get("subgroup", 0)
                 update_time = lesson.get("update_time")
