@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ruzbot"
+version = "0.1.0"
+description = "Telegram-бот для расписания (RUZ)"
+requires-python = ">=3.10"
+dependencies = [
+    "pyTelegramBotAPI==4.32.0",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+ruzclient = [
+    "ruz-client @ git+https://github.com/wiered/ruz-client.git",
+]
+ruzclientdev = [
+    "ruz-client @ git+https://github.com/wiered/ruz-client.git@dev",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
