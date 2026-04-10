@@ -4,12 +4,18 @@
         {
             "label": "Docker: Build",
             "type": "shell",
-            "command": "docker build -t ruz-client:local \"${workspaceFolder}\"",
+            "command": "docker build -t ruzbot:local \"${workspaceFolder}\"",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Docker: Build (ruzclient dev)",
+            "type": "shell",
+            "command": "docker build --build-arg RUZ_EXTRA=ruzclientdev -t ruzbot:local \"${workspaceFolder}\"",
+            "problemMatcher": []
         },
         {
             "label": "Docker: Run",
