@@ -10,6 +10,15 @@ Telegram-бот для просмотра расписания МГТУ чере
 - посмотреть преподавателей и предметы, которые есть в расписании выбранной недели;
 - перейти к расписанию конкретного преподавателя или предмета.
 
+## Зависимости
+
+### Ссылки на компоненты
+
+- [ruz-server (backend API)](https://github.com/wiered/ruz-server) - сервер backend API RUZ;
+- [ruz-client (Python-клиент)](https://github.com/wiered/ruz-client) - асинхронный Python-клиент для backend API RUZ;
+- [pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/) — асинхронный Python-клиент для Telegram Bot API;
+- [python-dotenv](https://pypi.org/project/python-dotenv/) — управление переменными окружения из файла `.env`;
+
 ## Требования
 
 - Python 3.10 или новее;
