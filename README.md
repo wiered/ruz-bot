@@ -31,7 +31,7 @@ Telegram-бот для просмотра расписания МГТУ чере
 Клонирование репозитория:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/wiered/ruz-bot.git
 cd ruz-bot
 ```
 

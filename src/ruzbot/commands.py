@@ -320,7 +320,7 @@ async def sendProfileCommand(bot, message, *, user_id: int):
         {
             "Установить группу": {"callback_data": "configureGroup"},
             "Назад": {"callback_data": "start"},
-            "GitHub": {"url": "https://github.com/wiered/ruz-client"},
+            "GitHub": {"url": "https://github.com/wiered/ruz-bot/"},
         },
         row_width=2,
     )
