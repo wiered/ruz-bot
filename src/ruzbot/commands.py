@@ -283,7 +283,7 @@ async def setGroupCommand(bot, message, *, user_id: int):
 async def setSubGroupCommand(bot, message, *, user_id: int):
     logger.info(f"setSubGroupCommand called: user={user_id}")
     reply_message = (
-        "Чтобы завершить регистрацию, введите одну цифру подгруппы: 0, 1 или 2.\n"
+        "Введите одну цифру подгруппы: 0, 1 или 2.\n"
         "Если номер не является числом, введите 0."
     )
     await bot.reply_to(message, reply_message)
@@ -335,10 +335,11 @@ async def sendProfileCommand(bot, message, *, user_id: int):
     logger.info(f"sendProfileCommand completed: user={user_id}")
 
 
-async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
+async def setGroup(bot, callback, group_oid: int, group_label: str) -> None:
     """
-    Новый пользователь: создаётся на сервере с ``subgroup=null``; подгруппа задаётся отдельным шагом.
-    Существующий: обновляем группу. Возвращает True, если нужно запросить подгруппу (первичная регистрация).
+    Создаёт или обновляет группу на сервере. Дальше бот просит подгруппу (0/1/2);
+    при смене группы у существующего пользователя подгруппа на API не обнуляется —
+    бэкенд не допускает subgroup=null при заданном group_oid.
     """
     user_id = callback.from_user.id
     logger.info(f"setGroup called: user_id={user_id}, group_oid={group_oid}, group_label={group_label!r}")
@@ -365,7 +366,7 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
             )
             await client.users.create_user(payload)
             logger.info(f"User {user_id} created with group_oid={group_oid}, subgroup=null")
-            return True
+            return
         upd = UserUpdate(
             group_oid=group_oid,
             group_guid=hit["guid"] if hit else None,
@@ -374,7 +375,6 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
         )
         await client.users.update_user(user_id, upd)
         logger.info(f"User {user_id} updated group_oid={group_oid}")
-        return False
 
 
 async def updateUserSubGroup(user_id: int, sub_group: int) -> None:

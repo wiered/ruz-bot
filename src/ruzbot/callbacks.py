@@ -87,7 +87,7 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
             prev = u.get("subgroup")
             logger.debug(f"Sub-group set/update: {sub_group_number} for user_id={uid}")
             await commands.updateUserSubGroup(uid, sub_group_number)
-            msg = "Регистрация завершена." if prev is None else "Подгруппа обновлена."
+            msg = "Подгруппа установлена." if prev is None else "Подгруппа обновлена."
             message = await bot.reply_to(callback, msg)
             await commands.sendProfileCommand(bot, message, user_id=uid)
 
@@ -137,9 +137,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             logger.debug(
                 f"Button 'setGroup' pressed with group_oid={group_oid}, label={group_label!r}"
             )
-            needs_subgroup = await commands.setGroup(bot, callback, group_oid, group_label)
-            if needs_subgroup:
-                await commands.setSubGroupCommand(bot, callback.message, user_id=uid)
+            await commands.setGroup(bot, callback, group_oid, group_label)
+            await bot.answer_callback_query(callback.id)
+            await commands.setSubGroupCommand(bot, callback.message, user_id=uid)
 
         case ["searchTeacher"]:
             # await search_handlers.search_teacher_list_command(bot, callback.message, 0, user_id=uid)
