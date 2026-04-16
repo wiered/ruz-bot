@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "pyTelegramBotAPI==4.32.0",
     "python-dotenv",
-    "redis",
+    "redis==7.4.0"
 ]
 
 [project.optional-dependencies]
@@ -19,6 +19,12 @@ ruzclient = [
 ]
 ruzclientdev = [
     "ruz-client @ git+https://github.com/wiered/ruz-client.git@dev",
+]
+test = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "pytest-cov",
 ]
 
 [tool.setuptools.packages.find]
