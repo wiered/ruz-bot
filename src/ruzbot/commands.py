@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from telebot import types
 from telebot.util import quick_markup
 
-from ruzbot import markups
+from ruzbot import cache, markups
 from ruzbot.bot import __version__ as BOT_VERSION
 from ruzbot.utils import ruz_client, remove_position
 from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
@@ -145,13 +145,21 @@ def _format_week_message(anchor: datetime, lessons: list[UserScheduleLesson]) ->
     return _escape_like_prototype("\n".join(lines))
 
 
+def _lessons_for_date(lessons: list[UserScheduleLesson], target_date: datetime) -> list[UserScheduleLesson]:
+    target_iso = target_date.strftime("%Y-%m-%d")
+    return [lesson for lesson in lessons if lesson["date"] == target_iso]
+
+
 async def _fetch_user(client, user_id: int):
-    try:
-        return await client.users.get_by_id(user_id)
-    except RuzHttpError as e:
-        if e.status_code == 404:
-            return None
-        raise
+    async def loader():
+        try:
+            return await client.users.get_by_id(user_id)
+        except RuzHttpError as e:
+            if e.status_code == 404:
+                return None
+            raise
+
+    return await cache.get_or_load_profile(user_id, loader)
 
 
 def _normalize_parse_day_delta(date_arg) -> int:
@@ -186,12 +194,20 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
 
     async with ruz_client() as client:
         target_date = datetime.today() + timedelta(days=delta_days)
-        lessons = await client.schedule.get_user_day(user_id, target_date.date())
+        lessons = await cache.get_or_load_week_lessons(
+            user_id,
+            target_date.date(),
+            lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
+        )
+
+    if lessons is None:
+        lessons = []
+    day_lessons = _lessons_for_date(lessons, target_date)
 
     if is_dangerous_criminal(user_id):
-        reply_message = criminal_format_day_message(lessons, target_date)
+        reply_message = criminal_format_day_message(day_lessons, target_date)
     else:
-        reply_message = _format_day_message(lessons, target_date)
+        reply_message = _format_day_message(day_lessons, target_date)
 
     reply_message = reply_message.replace("преподавател", "преподаватель")
 
@@ -211,6 +227,14 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
         reply_markup=markup,
         parse_mode="MarkdownV2",
     )
+    await cache.store_screen_snapshot(
+        user_id,
+        cache.normalize_screen_key(f"parseDay {delta_days}"),
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source=f"parseDay {delta_days}",
+    )
     logger.info(f"dateCommand completed: user={user_id}")
 
 
@@ -228,8 +252,15 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
             logger.error(f"Invalid _timedelta '{_timedelta}', defaulting to 0")
 
         base = datetime.today() + timedelta(weeks=delta_weeks)
-        lessons = await client.schedule.get_user_week(user_id, base.date())
+        lessons = await cache.get_or_load_week_lessons(
+            user_id,
+            base.date(),
+            lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
+        )
         last_update = datetime.now().strftime("%d.%m %H:%M:%S")
+
+    if lessons is None:
+        lessons = []
 
     if is_dangerous_criminal(user_id):
         temp_message = criminal_format_week_message(base, lessons)
@@ -268,6 +299,14 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
         message_id=message.message_id,
         reply_markup=markup,
         parse_mode="MarkdownV2",
+    )
+    await cache.store_screen_snapshot(
+        user_id,
+        cache.normalize_screen_key(f"parseWeek {delta_weeks}"),
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source=f"parseWeek {delta_weeks}",
     )
     logger.info(f"weekCommand completed: user={user_id}")
 
@@ -332,6 +371,14 @@ async def sendProfileCommand(bot, message, *, user_id: int):
         reply_markup=markup,
         parse_mode="MarkdownV2",
     )
+    await cache.store_screen_snapshot(
+        user_id,
+        "showProfile",
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source="showProfile",
+    )
     logger.info(f"sendProfileCommand completed: user={user_id}")
 
 
@@ -366,6 +413,7 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> None:
             )
             await client.users.create_user(payload)
             logger.info(f"User {user_id} created with group_oid={group_oid}, subgroup=null")
+            await cache.invalidate_user(user_id)
             return
         upd = UserUpdate(
             group_oid=group_oid,
@@ -374,21 +422,32 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> None:
             faculty_name=hit.get("faculty_name") if hit else None,
         )
         await client.users.update_user(user_id, upd)
+        await cache.invalidate_user(user_id)
         logger.info(f"User {user_id} updated group_oid={group_oid}")
 
 
 async def updateUserSubGroup(user_id: int, sub_group: int) -> None:
     async with ruz_client() as client:
         await client.users.update_user(user_id, UserUpdate(subgroup=sub_group))
+    await cache.invalidate_user(user_id)
 
 
-async def search_menu_stub_command(bot, message, *, user_id: int) -> None:
+async def search_menu_stub_command(bot, message, *, user_id: int, screen_name: str = "searchStub") -> None:
     """Временная заглушка для «Преподаватели» / «Предметы» в главном меню."""
+    reply_message = "Ой, это пока что недоступно"
+    markup = quick_markup({"Назад": {"callback_data": "start"}}, row_width=1)
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=message.message_id,
-        text="Ой, это пока что недоступно",
-        reply_markup=quick_markup({"Назад": {"callback_data": "start"}}, row_width=1),
+        text=reply_message,
+        reply_markup=markup,
+    )
+    await cache.store_screen_snapshot(
+        user_id,
+        screen_name,
+        text=reply_message,
+        reply_markup=markup,
+        source=screen_name,
     )
 
 
@@ -428,4 +487,12 @@ async def backCommand(bot, message, additional_message: str = "", *, user_id: in
         message_id=message.message_id,
         reply_markup=markup,
     )
+    if not additional_message:
+        await cache.store_screen_snapshot(
+            user_id,
+            "start",
+            text=reply_message,
+            reply_markup=markup,
+            source="start",
+        )
     logger.info(f"backCommand completed: user_id={user_id}")

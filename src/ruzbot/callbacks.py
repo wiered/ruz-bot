@@ -4,6 +4,7 @@ import re
 from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
+from ruzbot import cache
 from ruzbot import commands, search_handlers
 from ruzbot.utils import getRandomGroup, ruz_client
 from ruzclient.errors import RuzHttpError
@@ -101,6 +102,11 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
     )
     uid = callback.from_user.id
 
+    if callback.data:
+        if await cache.replay_screen_snapshot(bot, callback.message, uid, callback.data):
+            await bot.answer_callback_query(callback.id)
+            return
+
     match callback.data.split(" "):
         case ["start"]:
             logger.debug("Button 'start' pressed")
@@ -143,7 +149,12 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
 
         case ["searchTeacher"]:
             # await search_handlers.search_teacher_list_command(bot, callback.message, 0, user_id=uid)
-            await commands.search_menu_stub_command(bot, callback.message, user_id=uid)
+            await commands.search_menu_stub_command(
+                bot,
+                callback.message,
+                user_id=uid,
+                screen_name=callback.data,
+            )
 
         case ["teacherPage", page_s]:
             try:
@@ -184,7 +195,12 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
 
         case ["searchSubject"]:
             # await search_handlers.search_subject_list_command(bot, callback.message, 0, user_id=uid)
-            await commands.search_menu_stub_command(bot, callback.message, user_id=uid)
+            await commands.search_menu_stub_command(
+                bot,
+                callback.message,
+                user_id=uid,
+                screen_name=callback.data,
+            )
 
         case ["subjectPage", page_s]:
             try:
