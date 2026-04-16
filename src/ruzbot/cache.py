@@ -18,6 +18,9 @@ except ImportError:  # pragma: no cover - dependency is optional during bootstra
 
 logger = logging.getLogger(__name__)
 
+_GROUP_SCHEDULE_SLIDE_THRESHOLD_S = 50 * 60
+_GROUP_SCHEDULE_SLIDE_MAX_TTL_S = 60 * 60
+
 _redis_client = None
 _redis_lock = asyncio.Lock()
 
@@ -184,6 +187,33 @@ async def _store_json_key(key: str, value: Any, ttl_s: int) -> None:
         logger.exception("Failed to store Redis key %s", key)
 
 
+async def _maybe_slide_group_schedule_ttl(key: str) -> None:
+    client = await get_redis_client()
+    if client is None:
+        return
+
+    try:
+        ttl = await client.ttl(key)
+    except Exception:
+        logger.exception("Failed to read TTL for Redis key %s", key)
+        return
+
+    if ttl < 0 or ttl >= _GROUP_SCHEDULE_SLIDE_THRESHOLD_S:
+        return
+
+    new_ttl_s = min(
+        ttl + settings.redis_group_schedule_slide_extend_s,
+        _GROUP_SCHEDULE_SLIDE_MAX_TTL_S,
+    )
+    if new_ttl_s <= 0:
+        return
+
+    try:
+        await client.expire(key, new_ttl_s)
+    except Exception:
+        logger.exception("Failed to extend TTL for Redis key %s", key)
+
+
 async def get_or_load_profile(
     user_id: int, loader: Callable[[], Awaitable[Any]]
 ) -> Any:
@@ -248,6 +278,7 @@ async def get_or_load_group_week_lessons(
     key = group_week_key(group_id, anchor_date)
     cached = await _read_json_key(key)
     if cached is not None:
+        await _maybe_slide_group_schedule_ttl(key)
         return cached
 
     anchor = week_anchor_date(anchor_date)

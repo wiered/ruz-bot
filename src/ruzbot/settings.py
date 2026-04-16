@@ -15,6 +15,9 @@ class Settings:
     redis_ttl_group_schedule_s: int = int(
         os.getenv("REDIS_TTL_GROUP_SCHEDULE_S", "3600")
     )
+    redis_group_schedule_slide_extend_s: int = int(
+        os.getenv("REDIS_GROUP_SCHEDULE_SLIDE_EXTEND_S", "600")
+    )
     redis_ttl_user_schedule_s: int = int(os.getenv("REDIS_TTL_USER_SCHEDULE_S", "300"))
     redis_ttl_message_s: int = int(os.getenv("REDIS_TTL_MESSAGE_S", "600"))
     default_headers: dict[str, str] = {
