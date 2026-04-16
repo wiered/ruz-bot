@@ -194,9 +194,14 @@ async def _fetch_user(client, user_id: int):
 
     return await cache.get_or_load_profile(user_id, loader)
 
+
 async def _fetch_group(client, group_oid: int):
     try:
         return await client.groups.get_group(group_oid)
+    except RuzHttpError as e:
+        if e.status_code == 404:
+            return None
+        raise
     except ValueError:
         return None
 
@@ -507,7 +512,9 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
                 )
 
             group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
-            group_name = _normalize_optional_str(hit.get("name") if hit else group_label)
+            group_name = _normalize_optional_str(
+                hit.get("name") if hit else group_label
+            )
 
             missing_meta = [
                 name
