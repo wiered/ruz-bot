@@ -141,11 +141,27 @@ docker build -t ruzbot .
 docker build --build-arg RUZ_EXTRA=ruzclientdev -t ruzbot .
 ```
 
-Запуск контейнера:
+Запуск контейнера с настройками по умолчанию:
+
+```bash
+docker run --rm ruzbot
+```
+
+Запуск контейнера с переменными из файла `.env`:
 
 ```bash
 docker run --rm --env-file .env ruzbot
 ```
+
+Запуск через Docker Compose (бот + Redis):
+
+```bash
+docker compose up --build
+```
+
+В `docker-compose.yml` сервис бота автоматически получает
+`REDIS_URL=redis://redis:6379/0`, чтобы подключаться к Redis по имени сервиса
+`redis` внутри compose-сети.
 
 ## Как работает бот
 
