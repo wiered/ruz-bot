@@ -16,17 +16,22 @@ def main() -> None:
     # Check Telegram API availability using getMe before proceeding
     try:
         url = f"https://api.telegram.org/bot{settings.bot_token}/getMe"
-        with urllib.request.urlopen(url, timeout=5) as response:
+        with urllib.request.urlopen(url, timeout=2) as response:
             resp_body = response.read().decode()
             if response.status == 200:
                 data = json.loads(resp_body)
                 if data.get("ok"):
                     print("getMe успешен, api.telegram.org доступен")
                 else:
-                    print("api.telegram.org ответил ошибкой: %r" % data, file=sys.stderr)
+                    print(
+                        "api.telegram.org ответил ошибкой: %r" % data, file=sys.stderr
+                    )
                     sys.exit(2)
             else:
-                print("api.telegram.org недоступен (status=%s)" % response.status, file=sys.stderr)
+                print(
+                    "api.telegram.org недоступен (status=%s)" % response.status,
+                    file=sys.stderr,
+                )
                 sys.exit(2)
     except Exception as ex:
         print("Ошибка доступа к api.telegram.org (getMe): %s" % ex, file=sys.stderr)

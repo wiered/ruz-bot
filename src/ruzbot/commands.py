@@ -8,7 +8,7 @@ from telebot.util import quick_markup
 from ruzbot import markups
 from ruzbot.bot import __version__ as BOT_VERSION
 from ruzbot.utils import ruz_client, remove_position
-from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
+from ruzclient import UNSET, UserCreate, UserScheduleLesson, UserUpdate
 from ruzclient.errors import RuzHttpError
 from ruzbot.deathnote import is_dangerous_criminal, criminal_format_day_message, criminal_format_week_message
 
@@ -152,6 +152,27 @@ async def _fetch_user(client, user_id: int):
         if e.status_code == 404:
             return None
         raise
+
+
+async def _fetch_group(client, group_oid: int):
+    try:
+        return await client.groups.get_group(group_oid)
+    except ValueError:
+        return None
+
+
+def _normalize_optional_str(value: str | None) -> str | None:
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s or None
+
+
+def _group_hit_for_oid(hits: list, group_oid: int):
+    for h in hits:
+        if h["oid"] == group_oid:
+            return h
+    return None
 
 
 def _normalize_parse_day_delta(date_arg) -> int:
@@ -335,11 +356,14 @@ async def sendProfileCommand(bot, message, *, user_id: int):
     logger.info(f"sendProfileCommand completed: user={user_id}")
 
 
-async def setGroup(bot, callback, group_oid: int, group_label: str) -> None:
+async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
     """
     Создаёт или обновляет группу на сервере. Дальше бот просит подгруппу (0/1/2);
     при смене группы у существующего пользователя подгруппа на API не обнуляется —
     бэкенд не допускает subgroup=null при заданном group_oid.
+
+    При ``POST /api/user/`` поле ``faculty_name`` не отправляется — сервер сам
+    подставляет ``no_faculty`` для новой записи группы.
     """
     user_id = callback.from_user.id
     logger.info(f"setGroup called: user_id={user_id}, group_oid={group_oid}, group_label={group_label!r}")
@@ -347,34 +371,73 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> None:
     uname = callback.from_user.username or str(user_id)
 
     async with ruz_client() as client:
-        hits = await client.groups.search_groups_by_name(group_label)
-        hit = next((h for h in hits if h["oid"] == group_oid), None)
-        if hit is None and hits:
-            hit = hits[0]
+        server_group = await _fetch_group(client, group_oid)
+        group_guid = None
+        group_name = None
+
+        if server_group is None:
+            hits = await client.groups.search_groups_by_name(group_label)
+            hit = _group_hit_for_oid(hits, group_oid)
+            if hit is None and hits:
+                logger.warning(
+                    "setGroup: oid %s not in search hits for label %r (oids=%s); "
+                    "metadata from search is not applied",
+                    group_oid,
+                    group_label,
+                    [h["oid"] for h in hits],
+                )
+
+            group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
+            group_name = _normalize_optional_str(hit.get("name") if hit else group_label)
+
+            missing_meta = [
+                name
+                for name, value in (
+                    ("group_guid", group_guid),
+                    ("group_name", group_name),
+                )
+                if value is None
+            ]
+            if missing_meta:
+                logger.warning(
+                    "setGroup: cannot create missing server group %s for label %r; missing=%s",
+                    group_oid,
+                    group_label,
+                    missing_meta,
+                )
+                await bot.reply_to(
+                    callback.message,
+                    "Не удалось сохранить эту группу: сервер не получил полные данные о ней. "
+                    "Попробуйте выбрать другую группу или повторить позже.",
+                )
+                return False
 
         existing = await _fetch_user(client, user_id)
 
         if existing is None:
-            payload = UserCreate(
-                id=user_id,
-                username=uname,
-                group_oid=group_oid,
-                subgroup=None,
-                group_guid=hit["guid"] if hit else None,
-                group_name=hit["name"] if hit else group_label,
-                faculty_name=hit.get("faculty_name") if hit else None,
+            await client.users.create_user(
+                UserCreate(
+                    id=user_id,
+                    username=uname,
+                    group_oid=group_oid,
+                    subgroup=None,
+                    group_guid=group_guid,
+                    group_name=group_name,
+                )
             )
-            await client.users.create_user(payload)
             logger.info(f"User {user_id} created with group_oid={group_oid}, subgroup=null")
-            return
-        upd = UserUpdate(
-            group_oid=group_oid,
-            group_guid=hit["guid"] if hit else None,
-            group_name=hit["name"] if hit else group_label,
-            faculty_name=hit.get("faculty_name") if hit else None,
+            return True
+
+        await client.users.update_user(
+            user_id,
+            UserUpdate(
+                group_oid=group_oid,
+                group_guid=group_guid if server_group is None else UNSET,
+                group_name=group_name if server_group is None else UNSET,
+            ),
         )
-        await client.users.update_user(user_id, upd)
         logger.info(f"User {user_id} updated group_oid={group_oid}")
+        return True
 
 
 async def updateUserSubGroup(user_id: int, sub_group: int) -> None:

@@ -137,9 +137,10 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             logger.debug(
                 f"Button 'setGroup' pressed with group_oid={group_oid}, label={group_label!r}"
             )
-            await commands.setGroup(bot, callback, group_oid, group_label)
+            saved = await commands.setGroup(bot, callback, group_oid, group_label)
             await bot.answer_callback_query(callback.id)
-            await commands.setSubGroupCommand(bot, callback.message, user_id=uid)
+            if saved:
+                await commands.setSubGroupCommand(bot, callback.message, user_id=uid)
 
         case ["searchTeacher"]:
             # await search_handlers.search_teacher_list_command(bot, callback.message, 0, user_id=uid)

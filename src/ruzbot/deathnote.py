@@ -1,14 +1,8 @@
-import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from telebot.util import quick_markup
 
-from ruzbot import markups
-from ruzbot.bot import __version__ as BOT_VERSION
-from ruzbot.utils import ruz_client
-from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
-from ruzclient.errors import RuzHttpError
+from ruzclient import UserScheduleLesson
 
 list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot = [
     "930307939"
