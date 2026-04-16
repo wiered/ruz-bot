@@ -8,7 +8,7 @@ from telebot.util import quick_markup
 from ruzbot import cache, markups
 from ruzbot.bot import __version__ as BOT_VERSION
 from ruzbot.utils import ruz_client, remove_position
-from ruzclient import UNSET, UserCreate, UserScheduleLesson, UserUpdate
+from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
 from ruzclient.errors import RuzHttpError
 from ruzbot.deathnote import (
     is_dangerous_criminal,
@@ -240,6 +240,7 @@ def _filter_lessons_for_subgroup(
             continue
     return filtered_lessons
 
+
 async def get_user_week_lessons(client, user_id: int, anchor_date):
     user = await _fetch_user(client, user_id)
     if user is None:
@@ -263,6 +264,7 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
         return user, []
 
     filtered_lessons = _filter_lessons_for_subgroup(lessons, subgroup)
+
     async def user_week_loader(_anchor):
         return filtered_lessons
 
@@ -308,11 +310,14 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
 
     async with ruz_client() as client:
         target_date = datetime.today() + timedelta(days=delta_days)
-        _, week_lessons = await get_user_week_lessons(client, user_id, target_date.date())
+        _, week_lessons = await get_user_week_lessons(
+            client, user_id, target_date.date()
+        )
 
     if week_lessons is None:
         await backCommand(bot, message, user_id=user_id)
         return
+
     async def day_loader(_day_date):
         return _lessons_for_date(week_lessons, target_date)
 
@@ -518,8 +523,12 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
 
     async with ruz_client() as client:
         server_group = await _fetch_group(client, group_oid)
-        group_guid = None
-        group_name = None
+        group_guid = _normalize_optional_str(
+            server_group.get("guid") if server_group else None
+        )
+        group_name = _normalize_optional_str(
+            server_group.get("name") if server_group else None
+        )
 
         if server_group is None:
             hits = await client.groups.search_groups_by_name(group_label)
@@ -533,10 +542,12 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
                     [h["oid"] for h in hits],
                 )
 
-            group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
-            group_name = _normalize_optional_str(
-                hit.get("name") if hit else group_label
-            )
+            if group_guid is None:
+                group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
+            if group_name is None:
+                group_name = _normalize_optional_str(
+                    hit.get("name") if hit else group_label
+                )
 
             missing_meta = [
                 name
@@ -583,8 +594,8 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
             user_id,
             UserUpdate(
                 group_oid=group_oid,
-                group_guid=group_guid if server_group is None else UNSET,
-                group_name=group_name if server_group is None else UNSET,
+                group_guid=group_guid,
+                group_name=group_name,
             ),
         )
         await cache.invalidate_user(user_id)

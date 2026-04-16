@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from datetime import date
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, patch
 
@@ -77,9 +77,14 @@ ruzbot_utils.remove_position = lambda value: value
 
 ruzclient = _ensure_module("ruzclient")
 ruzclient.UNSET = object()
-ruzclient.UserCreate = type("UserCreate", (), {})
+class _Payload:
+    def __init__(self, **kwargs) -> None:
+        self.__dict__.update(kwargs)
+
+
+ruzclient.UserCreate = _Payload
 ruzclient.UserScheduleLesson = dict
-ruzclient.UserUpdate = type("UserUpdate", (), {})
+ruzclient.UserUpdate = _Payload
 ruzclient_errors = _ensure_module("ruzclient.errors")
 
 
@@ -243,3 +248,37 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
 
         with self.assertRaises(RuzHttpError):
             await commands._fetch_group(fake_client, 55)
+
+    async def test_set_group_uses_server_metadata_for_existing_user(self) -> None:
+        fake_client = SimpleNamespace(
+            users=SimpleNamespace(
+                update_user=AsyncMock(),
+                create_user=AsyncMock(),
+            )
+        )
+        fake_bot = SimpleNamespace(reply_to=AsyncMock())
+        fake_callback = SimpleNamespace(
+            from_user=SimpleNamespace(id=42, username="alice"),
+            message=SimpleNamespace(),
+        )
+
+        with (
+            patch.object(commands, "_fetch_group", AsyncMock(return_value={"guid": "guid-55", "name": "Group 55"})),
+            patch.object(commands, "_fetch_user", AsyncMock(return_value={"id": 42})),
+            patch.object(commands, "ruz_client", return_value=_DummyAsyncContextManager()),
+            patch.object(
+                _DummyAsyncContextManager,
+                "__aenter__",
+                AsyncMock(return_value=fake_client),
+            ),
+            patch.object(commands.cache, "invalidate_user", AsyncMock()),
+        ):
+            saved = await commands.setGroup(fake_bot, fake_callback, 55, "Group 55")
+
+        self.assertTrue(saved)
+        fake_client.users.create_user.assert_not_awaited()
+        fake_client.users.update_user.assert_awaited_once()
+        _, update_payload = fake_client.users.update_user.await_args.args
+        self.assertEqual(update_payload.group_oid, 55)
+        self.assertEqual(update_payload.group_guid, "guid-55")
+        self.assertEqual(update_payload.group_name, "Group 55")
