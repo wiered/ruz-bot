@@ -77,6 +77,8 @@ ruzbot_utils.remove_position = lambda value: value
 
 ruzclient = _ensure_module("ruzclient")
 ruzclient.UNSET = object()
+
+
 class _Payload:
     def __init__(self, **kwargs) -> None:
         self.__dict__.update(kwargs)
@@ -155,7 +157,13 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
         old_user_day_key = f"{prefix}:user:42:schedule:day:2026-03-26"
         group_week_key = f"{prefix}:group:55:schedule:week:2026-03-23"
         fake = FakeRedisClient(
-            [profile_key, screen_key, old_user_week_key, old_user_day_key, group_week_key]
+            [
+                profile_key,
+                screen_key,
+                old_user_week_key,
+                old_user_day_key,
+                group_week_key,
+            ]
         )
 
         with patch.object(cache, "get_redis_client", AsyncMock(return_value=fake)):
@@ -208,9 +216,7 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
                 self.assertEqual(group_id, 55)
                 return await loader(cache.week_anchor_date(anchor_date))
 
-            async def fake_get_or_load_user_week_lessons(
-                user_id, anchor_date, loader
-            ):
+            async def fake_get_or_load_user_week_lessons(user_id, anchor_date, loader):
                 self.assertEqual(user_id, 100)
                 return await loader(cache.week_anchor_date(anchor_date))
 
@@ -263,9 +269,15 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(commands, "_fetch_group", AsyncMock(return_value={"guid": "guid-55", "name": "Group 55"})),
+            patch.object(
+                commands,
+                "_fetch_group",
+                AsyncMock(return_value={"guid": "guid-55", "name": "Group 55"}),
+            ),
             patch.object(commands, "_fetch_user", AsyncMock(return_value={"id": 42})),
-            patch.object(commands, "ruz_client", return_value=_DummyAsyncContextManager()),
+            patch.object(
+                commands, "ruz_client", return_value=_DummyAsyncContextManager()
+            ),
             patch.object(
                 _DummyAsyncContextManager,
                 "__aenter__",
