@@ -2,8 +2,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from ruzclient import UserScheduleLesson
-list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot = ["930307939"]
 
+list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot = ["930307939"]
 
 def is_dangerous_criminal(user_id: int) -> bool:
     return str(user_id) in list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot

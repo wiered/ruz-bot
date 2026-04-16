@@ -214,7 +214,6 @@ def _group_hit_for_oid(hits: list, group_oid: int):
             return h
     return None
 
-
 async def get_user_week_lessons(client, user_id: int, anchor_date):
     user = await _fetch_user(client, user_id)
     if user is None:
