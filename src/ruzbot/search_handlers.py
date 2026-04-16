@@ -647,10 +647,10 @@ async def week_teachers_list_command(
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=user_week_delta)
         try:
-            lessons = await cache.get_or_load_week_lessons(
+            _, lessons = await commands.get_user_week_lessons(
+                client,
                 user_id,
                 base.date(),
-                lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
             )
         except RuzHttpError as e:
             logger.error("week schedule for weekTeachersList: %s", e)
@@ -672,6 +672,9 @@ async def week_teachers_list_command(
                 reply_markup=markup,
             )
             return
+    if lessons is None:
+        await commands.backCommand(bot, message, user_id=user_id)
+        return
     lessons = lessons or []
 
     pairs = _unique_lecturers_from_lessons(lessons)
@@ -791,10 +794,10 @@ async def week_subjects_list_command(
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=user_week_delta)
         try:
-            lessons = await cache.get_or_load_week_lessons(
+            _, lessons = await commands.get_user_week_lessons(
+                client,
                 user_id,
                 base.date(),
-                lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
             )
         except RuzHttpError as e:
             logger.error("week schedule for weekSubjectsList: %s", e)
@@ -816,6 +819,9 @@ async def week_subjects_list_command(
                 reply_markup=markup,
             )
             return
+    if lessons is None:
+        await commands.backCommand(bot, message, user_id=user_id)
+        return
     lessons = lessons or []
 
     pairs = _unique_disciplines_from_lessons(lessons)

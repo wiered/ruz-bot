@@ -195,6 +195,33 @@ async def _fetch_user(client, user_id: int):
     return await cache.get_or_load_profile(user_id, loader)
 
 
+async def get_user_week_lessons(client, user_id: int, anchor_date):
+    user = await _fetch_user(client, user_id)
+    if user is None:
+        return None, None
+
+    group_oid = user.get("group_oid")
+    subgroup = user.get("subgroup")
+    if not group_oid or subgroup is None:
+        return user, None
+
+    lessons = await cache.get_or_load_group_week_lessons(
+        group_oid,
+        anchor_date,
+        lambda group_anchor: client.schedule.get_group_week(group_oid, group_anchor),
+    )
+    if lessons is None:
+        return user, []
+
+    if subgroup == 0:
+        return user, lessons
+
+    filtered_lessons = [
+        lesson for lesson in lessons if lesson.get("sub_group") == subgroup
+    ]
+    return user, filtered_lessons
+
+
 def _normalize_parse_day_delta(date_arg) -> int:
     """
     Смещение в днях от сегодня. Строка YYYY-MM-DD → дельта к сегодня (старые кнопки с датой).
@@ -220,7 +247,7 @@ def _normalize_parse_day_delta(date_arg) -> int:
 
 async def dateCommand(bot, message, date_arg, *, user_id: int):
     """
-    Расписание на день через ``GET .../schedule/user/{id}/day``.
+    Расписание на день через кешированную неделю группы.
     """
     delta_days = _normalize_parse_day_delta(date_arg)
     logger.info(
@@ -229,14 +256,11 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
 
     async with ruz_client() as client:
         target_date = datetime.today() + timedelta(days=delta_days)
-        lessons = await cache.get_or_load_week_lessons(
-            user_id,
-            target_date.date(),
-            lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
-        )
+        _, lessons = await get_user_week_lessons(client, user_id, target_date.date())
 
     if lessons is None:
-        lessons = []
+        await backCommand(bot, message, user_id=user_id)
+        return
     day_lessons = _lessons_for_date(lessons, target_date)
 
     if is_dangerous_criminal(user_id):
@@ -275,7 +299,7 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
 
 async def weekCommand(bot, message, _timedelta, *, user_id: int):
     """
-    Расписание на неделю через ``GET .../schedule/user/{id}/week``.
+    Расписание на неделю через кешированную неделю группы.
     """
     logger.info(f"weekCommand called: user={user_id}, _timedelta={_timedelta!r}")
 
@@ -287,15 +311,12 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
             logger.error(f"Invalid _timedelta '{_timedelta}', defaulting to 0")
 
         base = datetime.today() + timedelta(weeks=delta_weeks)
-        lessons = await cache.get_or_load_week_lessons(
-            user_id,
-            base.date(),
-            lambda anchor_date: client.schedule.get_user_week(user_id, anchor_date),
-        )
+        _, lessons = await get_user_week_lessons(client, user_id, base.date())
         last_update = datetime.now().strftime("%d.%m %H:%M:%S")
 
     if lessons is None:
-        lessons = []
+        await backCommand(bot, message, user_id=user_id)
+        return
 
     if is_dangerous_criminal(user_id):
         temp_message = criminal_format_week_message(base, lessons)
