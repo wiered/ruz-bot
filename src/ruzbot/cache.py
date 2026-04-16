@@ -215,7 +215,7 @@ async def get_or_load_week_lessons(
     if lessons is None:
         return None
 
-    await _store_json_key(key, lessons, settings.redis_ttl_schedule_s)
+    await _store_json_key(key, lessons, settings.redis_ttl_user_schedule_s)
     return lessons
 
 
@@ -236,7 +236,7 @@ async def get_or_load_day_lessons(
     if lessons is None:
         return None
 
-    await _store_json_key(key, lessons, settings.redis_ttl_schedule_s)
+    await _store_json_key(key, lessons, settings.redis_ttl_user_schedule_s)
     return lessons
 
 
@@ -255,7 +255,7 @@ async def get_or_load_group_week_lessons(
     if lessons is None:
         return None
 
-    await _store_json_key(key, lessons, settings.redis_ttl_schedule_s)
+    await _store_json_key(key, lessons, settings.redis_ttl_group_schedule_s)
     return lessons
 
 
