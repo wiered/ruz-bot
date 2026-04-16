@@ -166,7 +166,16 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
                     {"sub_group": 0, "lesson_id": 3},
                     {"sub_group": 1, "lesson_id": 4},
                 ],
-                [4],
+                [3, 4],
+            ),
+            (
+                "2",
+                [
+                    {"sub_group": 0, "lesson_id": 5},
+                    {"sub_group": "2", "lesson_id": 6},
+                    {"sub_group": 1, "lesson_id": 7},
+                ],
+                [5, 6],
             ),
         ]
 

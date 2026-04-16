@@ -201,9 +201,13 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
         return None, None
 
     group_oid = user.get("group_oid")
-    subgroup = user.get("subgroup")
-    if not group_oid or subgroup is None:
+    subgroup_raw = user.get("subgroup")
+    if not group_oid or subgroup_raw is None:
         return user, None
+    try:
+        subgroup = int(subgroup_raw)
+    except (TypeError, ValueError):
+        subgroup = 0
 
     lessons = await cache.get_or_load_group_week_lessons(
         group_oid,
@@ -216,9 +220,18 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
     if subgroup == 0:
         return user, lessons
 
-    filtered_lessons = [
-        lesson for lesson in lessons if lesson.get("sub_group") == subgroup
-    ]
+    filtered_lessons = []
+    for lesson in lessons:
+        lesson_subgroup = lesson.get("sub_group")
+        # sub_group=0 (или null) означает «для всех подгрупп».
+        if lesson_subgroup in (0, None):
+            filtered_lessons.append(lesson)
+            continue
+        try:
+            if int(lesson_subgroup) == subgroup:
+                filtered_lessons.append(lesson)
+        except (TypeError, ValueError):
+            continue
     return user, filtered_lessons
 
 
