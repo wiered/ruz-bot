@@ -8,6 +8,7 @@ from telebot.asyncio_helper import ApiTelegramException
 from telebot.formatting import mlink
 from telebot.util import quick_markup
 
+from ruzbot import cache
 from ruzbot import markups
 from ruzbot.utils import ruz_client
 
@@ -100,13 +101,15 @@ async def startCommand(message):
     markup = markups.generateStartMarkup()
 
     async with ruz_client() as client:
-        try:
-            user = await client.users.get_by_id(message.from_user.id)
-        except RuzHttpError as e:
-            if e.status_code == 404:
-                user = None
-            else:
+        async def loader():
+            try:
+                return await client.users.get_by_id(message.from_user.id)
+            except RuzHttpError as e:
+                if e.status_code == 404:
+                    return None
                 raise
+
+        user = await cache.get_or_load_profile(message.from_user.id, loader)
 
         if user is not None and user.get("group_oid") and user.get("subgroup") is not None:
             pass
@@ -130,3 +133,10 @@ async def startCommand(message):
             )
 
     await bot.reply_to(message, reply_message, reply_markup=markup)
+    await cache.store_screen_snapshot(
+        message.from_user.id,
+        "start",
+        text=reply_message,
+        reply_markup=markup,
+        source="start",
+    )
