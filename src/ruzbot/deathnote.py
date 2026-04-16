@@ -1,23 +1,35 @@
-import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from telebot.util import quick_markup
 
-from ruzbot import markups
-from ruzbot.bot import __version__ as BOT_VERSION
-from ruzbot.utils import ruz_client
-from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
-from ruzclient.errors import RuzHttpError
+from ruzclient import UserScheduleLesson
 
-list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot = [
-    "930307939"
-]
+list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot = ["930307939"]
+
 
 def is_dangerous_criminal(user_id: int) -> bool:
     return str(user_id) in list_of_dangerous_criminals_whom_I_dont_want_to_see_in_my_bot
 
-_PROTOTYPE_ESCAPE_CHARS = ["_", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
+
+_PROTOTYPE_ESCAPE_CHARS = [
+    "_",
+    "[",
+    "]",
+    "(",
+    ")",
+    "~",
+    "`",
+    ">",
+    "#",
+    "+",
+    "-",
+    "=",
+    "|",
+    "{",
+    "}",
+    ".",
+    "!",
+]
 
 _DAYS_RU = (
     "Понедельник",
@@ -38,14 +50,16 @@ _NUM_EMOJI_MAPPING = {
     6: "6️⃣",
     7: "7️⃣",
     8: "8️⃣",
-    9: "9️⃣"
+    9: "9️⃣",
 }
+
 
 def _escape_like_prototype(schedule_text: str) -> str:
     """Тот же приём, что в bot_prototype.start: символы MarkdownV2, кроме `*`."""
     for char in _PROTOTYPE_ESCAPE_CHARS:
         schedule_text = schedule_text.replace(char, "\\" + char)
     return schedule_text
+
 
 def _lesson_emoji(kind_of_work: str) -> str:
     """📚 лекция, ✏ практика, 🧪 лаб — по аналогии с EMOJIES в bot_prototype."""
@@ -58,8 +72,10 @@ def _lesson_emoji(kind_of_work: str) -> str:
         return "🧪"
     return "📚"
 
+
 def _time_hhmm(s: str) -> str:
     return s[:5] if len(s) >= 5 else s
+
 
 def _lesson_type_mapper(kind_of_work: str) -> str:
     k = (kind_of_work or "").lower()
@@ -78,6 +94,7 @@ def _lesson_type_mapper(kind_of_work: str) -> str:
     else:
         return f"🍆 {kind_of_work}"
 
+
 def _format_lesson_block(les: UserScheduleLesson, n: int) -> str:
     t1 = _time_hhmm(les["begin_lesson"])
     t2 = _time_hhmm(les["end_lesson"])
@@ -94,7 +111,10 @@ def _format_lesson_block(les: UserScheduleLesson, n: int) -> str:
         f"  🍆🍆🍆🍆🍆🍆🍆🍆🍆🍆"
     )
 
-def criminal_format_day_message(lessons: list[UserScheduleLesson], target: datetime) -> str:
+
+def criminal_format_day_message(
+    lessons: list[UserScheduleLesson], target: datetime
+) -> str:
     day_date = target.strftime("%d.%m")
     day_name = _DAYS_RU[target.weekday()]
     lines = [
@@ -104,11 +124,16 @@ def criminal_format_day_message(lessons: list[UserScheduleLesson], target: datet
     if not lessons:
         lines.append("  😴 Пар 😴 нет 😴")
     else:
-        for n, les in enumerate(sorted(lessons, key=lambda x: (x["begin_lesson"], x["lesson_id"]))):
+        for n, les in enumerate(
+            sorted(lessons, key=lambda x: (x["begin_lesson"], x["lesson_id"]))
+        ):
             lines.append(_format_lesson_block(les, n + 1))
     return _escape_like_prototype("\n".join(lines))
 
-def criminal_format_week_message(anchor: datetime, lessons: list[UserScheduleLesson]) -> str:
+
+def criminal_format_week_message(
+    anchor: datetime, lessons: list[UserScheduleLesson]
+) -> str:
     """Неделя пн–сб, как шесть дней в bot_prototype.format_schedule."""
     monday = anchor - timedelta(days=anchor.weekday())
     saturday = monday + timedelta(days=5)
@@ -119,7 +144,14 @@ def criminal_format_week_message(anchor: datetime, lessons: list[UserScheduleLes
         by_date[les["date"]].append(les)
 
     lines: list[str] = [f"== 🗓 Расписание 🗓 (🗓 {range_str} 🗓) =="]
-    days_short = ("📆 Понедельник", "📆 Вторник", "📆 Среда", "📆 Четверг", "📆 Пятница", "📆 Суббота")
+    days_short = (
+        "📆 Понедельник",
+        "📆 Вторник",
+        "📆 Среда",
+        "📆 Четверг",
+        "📆 Пятница",
+        "📆 Суббота",
+    )
 
     for i in range(6):
         d = monday + timedelta(days=i)
@@ -128,7 +160,9 @@ def criminal_format_week_message(anchor: datetime, lessons: list[UserScheduleLes
         lines.append(f"\n*= 📆 {days_short[i]} 📆 ({day_lbl}) 📆 =*")
         day_entries = by_date.get(d_iso, [])
         if day_entries:
-            for n, les in enumerate(sorted(day_entries, key=lambda x: (x["begin_lesson"], x["lesson_id"]))):
+            for n, les in enumerate(
+                sorted(day_entries, key=lambda x: (x["begin_lesson"], x["lesson_id"]))
+            ):
                 lines.append(_format_lesson_block(les, n + 1))
         else:
             lines.append("  😴 Пар 😴 нет")

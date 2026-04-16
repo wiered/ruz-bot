@@ -14,7 +14,11 @@ from telebot.util import quick_markup
 
 from ruzbot import cache
 from ruzbot import commands
-from ruzbot.deathnote import criminal_format_day_message, criminal_format_week_message, is_dangerous_criminal
+from ruzbot.deathnote import (
+    criminal_format_day_message,
+    criminal_format_week_message,
+    is_dangerous_criminal,
+)
 from ruzbot.utils import ruz_client, remove_position
 from ruzclient import UserScheduleLesson
 from ruzclient.errors import RuzHttpError
@@ -64,7 +68,9 @@ async def _edit_and_cache(
     )
 
 
-def _unique_lecturers_from_lessons(lessons: list[UserScheduleLesson]) -> list[tuple[int, str]]:
+def _unique_lecturers_from_lessons(
+    lessons: list[UserScheduleLesson],
+) -> list[tuple[int, str]]:
     seen: dict[int, str] = {}
     for les in lessons:
         lid = les.get("lecturer_id")
@@ -76,7 +82,9 @@ def _unique_lecturers_from_lessons(lessons: list[UserScheduleLesson]) -> list[tu
     return sorted(seen.items(), key=lambda x: (x[1].lower(), x[0]))
 
 
-def _unique_disciplines_from_lessons(lessons: list[UserScheduleLesson]) -> list[tuple[int, str]]:
+def _unique_disciplines_from_lessons(
+    lessons: list[UserScheduleLesson],
+) -> list[tuple[int, str]]:
     seen: dict[int, str] = {}
     for les in lessons:
         did = les.get("discipline_id")
@@ -128,9 +136,13 @@ async def search_teacher_list_command(bot, message, page: int, *, user_id: int) 
     prev_p = (page - 1) % pages
     next_p = (page + 1) % pages
     markup.row(
-        types.InlineKeyboardButton("⬅️ Пред. стр.", callback_data=f"teacherPage {prev_p}"),
+        types.InlineKeyboardButton(
+            "⬅️ Пред. стр.", callback_data=f"teacherPage {prev_p}"
+        ),
         types.InlineKeyboardButton("🏠 Назад", callback_data="start"),
-        types.InlineKeyboardButton("➡️ След. стр.", callback_data=f"teacherPage {next_p}"),
+        types.InlineKeyboardButton(
+            "➡️ След. стр.", callback_data=f"teacherPage {next_p}"
+        ),
     )
 
     await bot.edit_message_text(
@@ -148,7 +160,9 @@ async def search_teacher_list_command(bot, message, page: int, *, user_id: int) 
     )
 
 
-async def teacher_card_command(bot, message, lecturer_id: int, list_page: int, *, user_id: int) -> None:
+async def teacher_card_command(
+    bot, message, lecturer_id: int, list_page: int, *, user_id: int
+) -> None:
     async with ruz_client() as client:
         try:
             lecturer = await client.lecturers.get_lecturer(lecturer_id)
@@ -165,7 +179,9 @@ async def teacher_card_command(bot, message, lecturer_id: int, list_page: int, *
     markup = quick_markup(
         {
             "📅 Сегодня": {"callback_data": f"lecturerDay {lecturer_id} 0 {list_page}"},
-            "📅 Эта неделя": {"callback_data": f"lecturerWeek {lecturer_id} 0 {list_page}"},
+            "📅 Эта неделя": {
+                "callback_data": f"lecturerWeek {lecturer_id} 0 {list_page}"
+            },
             "К списку": {"callback_data": f"teacherPage {list_page}"},
             "🏠 Главная": {"callback_data": "start"},
         },
@@ -175,7 +191,9 @@ async def teacher_card_command(bot, message, lecturer_id: int, list_page: int, *
         bot,
         message,
         user_id=user_id,
-        screen_name=cache.normalize_screen_key(f"teacherCard {lecturer_id} {list_page}"),
+        screen_name=cache.normalize_screen_key(
+            f"teacherCard {lecturer_id} {list_page}"
+        ),
         text=_commands_escape(body),
         reply_markup=markup,
     )
@@ -270,7 +288,9 @@ async def lecturer_week_command(
         try:
             lessons = await client.search.lecturer_week(lecturer_id, base.date())
         except RuzHttpError as e:
-            text = _commands_escape(f"Не удалось загрузить расписание: HTTP {e.status_code}")
+            text = _commands_escape(
+                f"Не удалось загрузить расписание: HTTP {e.status_code}"
+            )
             markup = quick_markup({"Назад": {"callback_data": back_cb}}, row_width=1)
             await _edit_and_cache(
                 bot,
@@ -375,9 +395,13 @@ async def search_subject_list_command(bot, message, page: int, *, user_id: int) 
     prev_p = (page - 1) % pages
     next_p = (page + 1) % pages
     markup.row(
-        types.InlineKeyboardButton("⬅️ Пред. стр.", callback_data=f"subjectPage {prev_p}"),
+        types.InlineKeyboardButton(
+            "⬅️ Пред. стр.", callback_data=f"subjectPage {prev_p}"
+        ),
         types.InlineKeyboardButton("🏠 Назад", callback_data="start"),
-        types.InlineKeyboardButton("➡️ След. стр.", callback_data=f"subjectPage {next_p}"),
+        types.InlineKeyboardButton(
+            "➡️ След. стр.", callback_data=f"subjectPage {next_p}"
+        ),
     )
 
     await _edit_and_cache(
@@ -390,7 +414,9 @@ async def search_subject_list_command(bot, message, page: int, *, user_id: int) 
     )
 
 
-async def subject_card_command(bot, message, discipline_id: int, list_page: int, *, user_id: int) -> None:
+async def subject_card_command(
+    bot, message, discipline_id: int, list_page: int, *, user_id: int
+) -> None:
     async with ruz_client() as client:
         try:
             d = await client.disciplines.get_discipline(discipline_id)
@@ -406,8 +432,12 @@ async def subject_card_command(bot, message, discipline_id: int, list_page: int,
     )
     markup = quick_markup(
         {
-            "📅 Сегодня": {"callback_data": f"disciplineDay {discipline_id} 0 {list_page}"},
-            "📅 Эта неделя": {"callback_data": f"disciplineWeek {discipline_id} 0 {list_page}"},
+            "📅 Сегодня": {
+                "callback_data": f"disciplineDay {discipline_id} 0 {list_page}"
+            },
+            "📅 Эта неделя": {
+                "callback_data": f"disciplineWeek {discipline_id} 0 {list_page}"
+            },
             "К списку": {"callback_data": f"subjectPage {list_page}"},
             "🏠 Главная": {"callback_data": "start"},
         },
@@ -417,7 +447,9 @@ async def subject_card_command(bot, message, discipline_id: int, list_page: int,
         bot,
         message,
         user_id=user_id,
-        screen_name=cache.normalize_screen_key(f"subjectCard {discipline_id} {list_page}"),
+        screen_name=cache.normalize_screen_key(
+            f"subjectCard {discipline_id} {list_page}"
+        ),
         text=_commands_escape(body),
         reply_markup=markup,
     )
@@ -446,7 +478,9 @@ async def discipline_day_command(
         try:
             lessons = await client.search.discipline_day(discipline_id, target.date())
         except RuzHttpError as e:
-            text = _commands_escape(f"Не удалось загрузить расписание: HTTP {e.status_code}")
+            text = _commands_escape(
+                f"Не удалось загрузить расписание: HTTP {e.status_code}"
+            )
             markup = quick_markup({"Назад": {"callback_data": back_cb}}, row_width=1)
             await _edit_and_cache(
                 bot,
@@ -525,7 +559,9 @@ async def discipline_week_command(
         try:
             lessons = await client.search.discipline_week(discipline_id, base.date())
         except RuzHttpError as e:
-            text = _commands_escape(f"Не удалось загрузить расписание: HTTP {e.status_code}")
+            text = _commands_escape(
+                f"Не удалось загрузить расписание: HTTP {e.status_code}"
+            )
             markup = quick_markup({"Назад": {"callback_data": back_cb}}, row_width=1)
             await _edit_and_cache(
                 bot,
@@ -589,7 +625,9 @@ async def discipline_week_command(
     )
 
 
-async def week_teachers_list_command(bot, message, user_week_delta: int, page: int, *, user_id: int) -> None:
+async def week_teachers_list_command(
+    bot, message, user_week_delta: int, page: int, *, user_id: int
+) -> None:
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=user_week_delta)
         try:
@@ -600,13 +638,20 @@ async def week_teachers_list_command(bot, message, user_week_delta: int, page: i
             )
         except RuzHttpError as e:
             logger.error("week schedule for weekTeachersList: %s", e)
-            text = _commands_escape(f"Не удалось загрузить расписание: HTTP {e.status_code}")
-            markup = quick_markup({"Назад": {"callback_data": f"parseWeek {user_week_delta}"}}, row_width=1)
+            text = _commands_escape(
+                f"Не удалось загрузить расписание: HTTP {e.status_code}"
+            )
+            markup = quick_markup(
+                {"Назад": {"callback_data": f"parseWeek {user_week_delta}"}},
+                row_width=1,
+            )
             await _edit_and_cache(
                 bot,
                 message,
                 user_id=user_id,
-                screen_name=cache.normalize_screen_key(f"weekTeachersList {user_week_delta} {page}"),
+                screen_name=cache.normalize_screen_key(
+                    f"weekTeachersList {user_week_delta} {page}"
+                ),
                 text=text,
                 reply_markup=markup,
             )
@@ -623,7 +668,9 @@ async def week_teachers_list_command(bot, message, user_week_delta: int, page: i
             bot,
             message,
             user_id=user_id,
-            screen_name=cache.normalize_screen_key(f"weekTeachersList {user_week_delta} {page}"),
+            screen_name=cache.normalize_screen_key(
+                f"weekTeachersList {user_week_delta} {page}"
+            ),
             text="На этой неделе нет занятий с известным преподавателем.",
             reply_markup=markup,
         )
@@ -648,23 +695,37 @@ async def week_teachers_list_command(bot, message, user_week_delta: int, page: i
     prev_p = (page - 1) % pages
     next_p = (page + 1) % pages
     markup.row(
-        types.InlineKeyboardButton("⬅️ Пред. стр.", callback_data=f"weekTeachersList {user_week_delta} {prev_p}"),
-        types.InlineKeyboardButton("🏠 Назад", callback_data=f"parseWeek {user_week_delta}"),
-        types.InlineKeyboardButton("➡️ След. стр.", callback_data=f"weekTeachersList {user_week_delta} {next_p}"),
+        types.InlineKeyboardButton(
+            "⬅️ Пред. стр.", callback_data=f"weekTeachersList {user_week_delta} {prev_p}"
+        ),
+        types.InlineKeyboardButton(
+            "🏠 Назад", callback_data=f"parseWeek {user_week_delta}"
+        ),
+        types.InlineKeyboardButton(
+            "➡️ След. стр.", callback_data=f"weekTeachersList {user_week_delta} {next_p}"
+        ),
     )
 
     await _edit_and_cache(
         bot,
         message,
         user_id=user_id,
-        screen_name=cache.normalize_screen_key(f"weekTeachersList {user_week_delta} {page}"),
+        screen_name=cache.normalize_screen_key(
+            f"weekTeachersList {user_week_delta} {page}"
+        ),
         text="Преподаватели на выбранной неделе (по вашему расписанию):",
         reply_markup=markup,
     )
 
 
 async def week_teacher_open_command(
-    bot, message, lecturer_id: int, user_week_delta: int, list_page: int, *, user_id: int
+    bot,
+    message,
+    lecturer_id: int,
+    user_week_delta: int,
+    list_page: int,
+    *,
+    user_id: int,
 ) -> None:
     async with ruz_client() as client:
         try:
@@ -683,11 +744,15 @@ async def week_teacher_open_command(
     )
     markup = quick_markup(
         {
-            "📅 Сегодня": {"callback_data": f"lecturerDayW {lecturer_id} 0 {list_page} {user_week_delta}"},
+            "📅 Сегодня": {
+                "callback_data": f"lecturerDayW {lecturer_id} 0 {list_page} {user_week_delta}"
+            },
             "📅 Эта неделя": {
                 "callback_data": f"lecturerWeekW {lecturer_id} {user_week_delta} {list_page} {user_week_delta}"
             },
-            "К списку": {"callback_data": f"weekTeachersList {user_week_delta} {list_page}"},
+            "К списку": {
+                "callback_data": f"weekTeachersList {user_week_delta} {list_page}"
+            },
             "🏠 Главная": {"callback_data": "start"},
         },
         row_width=2,
@@ -704,7 +769,9 @@ async def week_teacher_open_command(
     )
 
 
-async def week_subjects_list_command(bot, message, user_week_delta: int, page: int, *, user_id: int) -> None:
+async def week_subjects_list_command(
+    bot, message, user_week_delta: int, page: int, *, user_id: int
+) -> None:
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=user_week_delta)
         try:
@@ -715,13 +782,20 @@ async def week_subjects_list_command(bot, message, user_week_delta: int, page: i
             )
         except RuzHttpError as e:
             logger.error("week schedule for weekSubjectsList: %s", e)
-            text = _commands_escape(f"Не удалось загрузить расписание: HTTP {e.status_code}")
-            markup = quick_markup({"Назад": {"callback_data": f"parseWeek {user_week_delta}"}}, row_width=1)
+            text = _commands_escape(
+                f"Не удалось загрузить расписание: HTTP {e.status_code}"
+            )
+            markup = quick_markup(
+                {"Назад": {"callback_data": f"parseWeek {user_week_delta}"}},
+                row_width=1,
+            )
             await _edit_and_cache(
                 bot,
                 message,
                 user_id=user_id,
-                screen_name=cache.normalize_screen_key(f"weekSubjectsList {user_week_delta} {page}"),
+                screen_name=cache.normalize_screen_key(
+                    f"weekSubjectsList {user_week_delta} {page}"
+                ),
                 text=text,
                 reply_markup=markup,
             )
@@ -738,7 +812,9 @@ async def week_subjects_list_command(bot, message, user_week_delta: int, page: i
             bot,
             message,
             user_id=user_id,
-            screen_name=cache.normalize_screen_key(f"weekSubjectsList {user_week_delta} {page}"),
+            screen_name=cache.normalize_screen_key(
+                f"weekSubjectsList {user_week_delta} {page}"
+            ),
             text="На этой неделе нет предметов с известным ID в расписании.",
             reply_markup=markup,
         )
@@ -763,23 +839,37 @@ async def week_subjects_list_command(bot, message, user_week_delta: int, page: i
     prev_p = (page - 1) % pages
     next_p = (page + 1) % pages
     markup.row(
-        types.InlineKeyboardButton("⬅️ Пред. стр.", callback_data=f"weekSubjectsList {user_week_delta} {prev_p}"),
-        types.InlineKeyboardButton("🏠 Назад", callback_data=f"parseWeek {user_week_delta}"),
-        types.InlineKeyboardButton("➡️ След. стр.", callback_data=f"weekSubjectsList {user_week_delta} {next_p}"),
+        types.InlineKeyboardButton(
+            "⬅️ Пред. стр.", callback_data=f"weekSubjectsList {user_week_delta} {prev_p}"
+        ),
+        types.InlineKeyboardButton(
+            "🏠 Назад", callback_data=f"parseWeek {user_week_delta}"
+        ),
+        types.InlineKeyboardButton(
+            "➡️ След. стр.", callback_data=f"weekSubjectsList {user_week_delta} {next_p}"
+        ),
     )
 
     await _edit_and_cache(
         bot,
         message,
         user_id=user_id,
-        screen_name=cache.normalize_screen_key(f"weekSubjectsList {user_week_delta} {page}"),
+        screen_name=cache.normalize_screen_key(
+            f"weekSubjectsList {user_week_delta} {page}"
+        ),
         text="Предметы на выбранной неделе (по вашему расписанию):",
         reply_markup=markup,
     )
 
 
 async def week_subject_open_command(
-    bot, message, discipline_id: int, user_week_delta: int, list_page: int, *, user_id: int
+    bot,
+    message,
+    discipline_id: int,
+    user_week_delta: int,
+    list_page: int,
+    *,
+    user_id: int,
 ) -> None:
     async with ruz_client() as client:
         try:
@@ -796,11 +886,15 @@ async def week_subject_open_command(
     )
     markup = quick_markup(
         {
-            "📅 Сегодня": {"callback_data": f"disciplineDayW {discipline_id} 0 {list_page} {user_week_delta}"},
+            "📅 Сегодня": {
+                "callback_data": f"disciplineDayW {discipline_id} 0 {list_page} {user_week_delta}"
+            },
             "📅 Эта неделя": {
                 "callback_data": f"disciplineWeekW {discipline_id} {user_week_delta} {list_page} {user_week_delta}"
             },
-            "К списку": {"callback_data": f"weekSubjectsList {user_week_delta} {list_page}"},
+            "К списку": {
+                "callback_data": f"weekSubjectsList {user_week_delta} {list_page}"
+            },
             "🏠 Главная": {"callback_data": "start"},
         },
         row_width=2,

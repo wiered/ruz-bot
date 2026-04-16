@@ -74,7 +74,9 @@ class RuzBot(AsyncTeleBot):
                 )
             raise
 
-    async def edit_message_text(self, text: str, **kwargs) -> Union[types.Message, bool]:
+    async def edit_message_text(
+        self, text: str, **kwargs
+    ) -> Union[types.Message, bool]:
         parse_mode = kwargs.get("parse_mode", self.parse_mode)
         text = _append_donation_footer(text, parse_mode)
         try:
@@ -95,12 +97,11 @@ async def startCommand(message):
     """
     /start: главное меню или подсказки по регистрации (группа / незавершённая регистрация).
     """
-    reply_message = (
-        "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
-    )
+    reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
     markup = markups.generateStartMarkup()
 
     async with ruz_client() as client:
+
         async def loader():
             try:
                 return await client.users.get_by_id(message.from_user.id)
@@ -111,9 +112,15 @@ async def startCommand(message):
 
         user = await cache.get_or_load_profile(message.from_user.id, loader)
 
-        if user is not None and user.get("group_oid") and user.get("subgroup") is not None:
+        if (
+            user is not None
+            and user.get("group_oid")
+            and user.get("subgroup") is not None
+        ):
             pass
-        elif user is not None and user.get("group_oid") and user.get("subgroup") is None:
+        elif (
+            user is not None and user.get("group_oid") and user.get("subgroup") is None
+        ):
             markup = quick_markup(
                 {"Выбрать другую группу": {"callback_data": "configureGroup"}},
                 row_width=1,

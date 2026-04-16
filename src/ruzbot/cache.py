@@ -104,7 +104,9 @@ def _serialize_markup(markup: Any) -> Optional[list[list[dict[str, Any]]]]:
     return rows
 
 
-def _deserialize_markup(payload: Optional[list[list[dict[str, Any]]]]) -> Optional[types.InlineKeyboardMarkup]:
+def _deserialize_markup(
+    payload: Optional[list[list[dict[str, Any]]]],
+) -> Optional[types.InlineKeyboardMarkup]:
     if not payload:
         return None
 
@@ -115,7 +117,11 @@ def _deserialize_markup(payload: Optional[list[list[dict[str, Any]]]]) -> Option
             text = item.get("text", "")
             callback_data = item.get("callback_data")
             url = item.get("url")
-            buttons.append(types.InlineKeyboardButton(text=text, callback_data=callback_data, url=url))
+            buttons.append(
+                types.InlineKeyboardButton(
+                    text=text, callback_data=callback_data, url=url
+                )
+            )
         if buttons:
             markup.row(*buttons)
     return markup
@@ -163,7 +169,9 @@ async def _store_json_key(key: str, value: Any, ttl_s: int) -> None:
         logger.exception("Failed to store Redis key %s", key)
 
 
-async def get_or_load_profile(user_id: int, loader: Callable[[], Awaitable[Any]]) -> Any:
+async def get_or_load_profile(
+    user_id: int, loader: Callable[[], Awaitable[Any]]
+) -> Any:
     key = profile_key(user_id)
     cached = await _read_json_key(key)
     if cached is not None:
@@ -212,10 +220,14 @@ async def store_screen_snapshot(
         source=source,
         created_at=datetime.utcnow().isoformat(timespec="seconds"),
     )
-    await _store_json_key(screen_key(user_id, screen_name), asdict(payload), settings.redis_ttl_message_s)
+    await _store_json_key(
+        screen_key(user_id, screen_name), asdict(payload), settings.redis_ttl_message_s
+    )
 
 
-async def get_screen_snapshot(user_id: int, screen_name: str) -> Optional[ScreenSnapshot]:
+async def get_screen_snapshot(
+    user_id: int, screen_name: str
+) -> Optional[ScreenSnapshot]:
     payload = await _read_json_key(screen_key(user_id, screen_name))
     if payload is None:
         return None
