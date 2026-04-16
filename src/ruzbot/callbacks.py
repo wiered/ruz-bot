@@ -4,6 +4,7 @@ import re
 from telebot.async_telebot import AsyncTeleBot
 from telebot.util import quick_markup
 
+from ruzbot import cache
 from ruzbot import commands, search_handlers
 from ruzbot.utils import getRandomGroup, ruz_client
 from ruzclient.errors import RuzHttpError
@@ -36,7 +37,11 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
         f"textCallbackHandler invoked: user_id={callback.from_user.id}, text={callback.text!r}"
     )
     patterns = [r"\w+\d+", r"\w+-\w+\d+", r"\d"]
-    match tuple(i for i, pattern in enumerate(patterns) if re.match(pattern, callback.text or "")):
+    match tuple(
+        i
+        for i, pattern in enumerate(patterns)
+        if re.match(pattern, callback.text or "")
+    ):
         case (0,) | (1,):
             group_name = callback.text
             logger.debug(f"Group selection text detected: {group_name}")
@@ -101,6 +106,13 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
     )
     uid = callback.from_user.id
 
+    if callback.data:
+        if await cache.replay_screen_snapshot(
+            bot, callback.message, uid, callback.data
+        ):
+            await bot.answer_callback_query(callback.id)
+            return
+
     match callback.data.split(" "):
         case ["start"]:
             logger.debug("Button 'start' pressed")
@@ -144,7 +156,12 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
 
         case ["searchTeacher"]:
             # await search_handlers.search_teacher_list_command(bot, callback.message, 0, user_id=uid)
-            await commands.search_menu_stub_command(bot, callback.message, user_id=uid)
+            await commands.search_menu_stub_command(
+                bot,
+                callback.message,
+                user_id=uid,
+                screen_name=callback.data,
+            )
 
         case ["teacherPage", page_s]:
             try:
@@ -152,7 +169,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid teacherPage: {page_s!r}")
                 return
-            await search_handlers.search_teacher_list_command(bot, callback.message, p, user_id=uid)
+            await search_handlers.search_teacher_list_command(
+                bot, callback.message, p, user_id=uid
+            )
 
         case ["teacherCard", lid_s, page_s]:
             try:
@@ -161,7 +180,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid teacherCard: {lid_s!r} {page_s!r}")
                 return
-            await search_handlers.teacher_card_command(bot, callback.message, lid, lp, user_id=uid)
+            await search_handlers.teacher_card_command(
+                bot, callback.message, lid, lp, user_id=uid
+            )
 
         case ["lecturerDay", lid_s, dd_s, lp_s]:
             try:
@@ -171,7 +192,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid lecturerDay: {callback.data!r}")
                 return
-            await search_handlers.lecturer_day_command(bot, callback.message, lid, dd, lp, user_id=uid)
+            await search_handlers.lecturer_day_command(
+                bot, callback.message, lid, dd, lp, user_id=uid
+            )
 
         case ["lecturerWeek", lid_s, wd_s, lp_s]:
             try:
@@ -181,11 +204,18 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid lecturerWeek: {callback.data!r}")
                 return
-            await search_handlers.lecturer_week_command(bot, callback.message, lid, wd, lp, user_id=uid)
+            await search_handlers.lecturer_week_command(
+                bot, callback.message, lid, wd, lp, user_id=uid
+            )
 
         case ["searchSubject"]:
             # await search_handlers.search_subject_list_command(bot, callback.message, 0, user_id=uid)
-            await commands.search_menu_stub_command(bot, callback.message, user_id=uid)
+            await commands.search_menu_stub_command(
+                bot,
+                callback.message,
+                user_id=uid,
+                screen_name=callback.data,
+            )
 
         case ["subjectPage", page_s]:
             try:
@@ -193,7 +223,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid subjectPage: {page_s!r}")
                 return
-            await search_handlers.search_subject_list_command(bot, callback.message, p, user_id=uid)
+            await search_handlers.search_subject_list_command(
+                bot, callback.message, p, user_id=uid
+            )
 
         case ["subjectCard", did_s, page_s]:
             try:
@@ -202,7 +234,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid subjectCard: {did_s!r} {page_s!r}")
                 return
-            await search_handlers.subject_card_command(bot, callback.message, did, lp, user_id=uid)
+            await search_handlers.subject_card_command(
+                bot, callback.message, did, lp, user_id=uid
+            )
 
         case ["disciplineDay", did_s, dd_s, lp_s]:
             try:
@@ -212,7 +246,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid disciplineDay: {callback.data!r}")
                 return
-            await search_handlers.discipline_day_command(bot, callback.message, did, dd, lp, user_id=uid)
+            await search_handlers.discipline_day_command(
+                bot, callback.message, did, dd, lp, user_id=uid
+            )
 
         case ["disciplineWeek", did_s, wd_s, lp_s]:
             try:
@@ -222,7 +258,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid disciplineWeek: {callback.data!r}")
                 return
-            await search_handlers.discipline_week_command(bot, callback.message, did, wd, lp, user_id=uid)
+            await search_handlers.discipline_week_command(
+                bot, callback.message, did, wd, lp, user_id=uid
+            )
 
         case ["weekTeachersList", uwd_s, page_s]:
             try:
@@ -231,7 +269,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid weekTeachersList: {callback.data!r}")
                 return
-            await search_handlers.week_teachers_list_command(bot, callback.message, uwd, p, user_id=uid)
+            await search_handlers.week_teachers_list_command(
+                bot, callback.message, uwd, p, user_id=uid
+            )
 
         case ["weekSubjectsList", uwd_s, page_s]:
             try:
@@ -240,7 +280,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid weekSubjectsList: {callback.data!r}")
                 return
-            await search_handlers.week_subjects_list_command(bot, callback.message, uwd, p, user_id=uid)
+            await search_handlers.week_subjects_list_command(
+                bot, callback.message, uwd, p, user_id=uid
+            )
 
         case ["weekTeacherOpen", lid_s, uwd_s, page_s]:
             try:
@@ -250,7 +292,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid weekTeacherOpen: {callback.data!r}")
                 return
-            await search_handlers.week_teacher_open_command(bot, callback.message, lid, uwd, lp, user_id=uid)
+            await search_handlers.week_teacher_open_command(
+                bot, callback.message, lid, uwd, lp, user_id=uid
+            )
 
         case ["weekSubjectOpen", did_s, uwd_s, page_s]:
             try:
@@ -260,7 +304,9 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
             except ValueError:
                 logger.error(f"Invalid weekSubjectOpen: {callback.data!r}")
                 return
-            await search_handlers.week_subject_open_command(bot, callback.message, did, uwd, lp, user_id=uid)
+            await search_handlers.week_subject_open_command(
+                bot, callback.message, did, uwd, lp, user_id=uid
+            )
 
         case ["lecturerDayW", lid_s, dd_s, lp_s, uwd_s]:
             try:
@@ -321,5 +367,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
 def register_handlers(bot: AsyncTeleBot):
     logger.info("Registering handlers with the bot")
     bot.register_message_handler(textCallbackHandler, pass_bot=True)
-    bot.register_callback_query_handler(callback=buttonsCallback, func=callbackFilter, pass_bot=True)
+    bot.register_callback_query_handler(
+        callback=buttonsCallback, func=callbackFilter, pass_bot=True
+    )
     logger.info("Handlers registered successfully")

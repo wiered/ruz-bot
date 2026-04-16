@@ -5,12 +5,16 @@ from datetime import datetime, timedelta
 from telebot import types
 from telebot.util import quick_markup
 
-from ruzbot import markups
+from ruzbot import cache, markups
 from ruzbot.bot import __version__ as BOT_VERSION
 from ruzbot.utils import ruz_client, remove_position
-from ruzclient import UNSET, UserCreate, UserScheduleLesson, UserUpdate
+from ruzclient import UserCreate, UserScheduleLesson, UserUpdate
 from ruzclient.errors import RuzHttpError
-from ruzbot.deathnote import is_dangerous_criminal, criminal_format_day_message, criminal_format_week_message
+from ruzbot.deathnote import (
+    is_dangerous_criminal,
+    criminal_format_day_message,
+    criminal_format_week_message,
+)
 
 # --------------------
 # Logging Configuration
@@ -26,7 +30,25 @@ if not logger.handlers:
 logger.propagate = False
 
 # Как в bot_prototype: экранируем всё, кроме «ручных» звёздочек разметки в шаблоне.
-_PROTOTYPE_ESCAPE_CHARS = ["_", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
+_PROTOTYPE_ESCAPE_CHARS = [
+    "_",
+    "[",
+    "]",
+    "(",
+    ")",
+    "~",
+    "`",
+    ">",
+    "#",
+    "+",
+    "-",
+    "=",
+    "|",
+    "{",
+    "}",
+    ".",
+    "!",
+]
 
 _DAYS_RU = (
     "Понедельник",
@@ -46,14 +68,16 @@ _LESSON_NUMBER_MAP = {
     "16:00": "5",
     "18:00": "6",
     "19:40": "7",
-    "20:00": "7"
+    "20:00": "7",
 }
+
 
 def _escape_like_prototype(schedule_text: str) -> str:
     """Тот же приём, что в bot_prototype.start: символы MarkdownV2, кроме `*`."""
     for char in _PROTOTYPE_ESCAPE_CHARS:
         schedule_text = schedule_text.replace(char, "\\" + char)
     return schedule_text
+
 
 def _lesson_emoji(kind_of_work: str) -> str:
     """📚 лекция, ✏ практика, 🧪 лаб — по аналогии с EMOJIES в bot_prototype."""
@@ -66,8 +90,10 @@ def _lesson_emoji(kind_of_work: str) -> str:
         return "🧪"
     return "📚"
 
+
 def _time_hhmm(s: str) -> str:
     return s[:5] if len(s) >= 5 else s
+
 
 def _lesson_type_mapper(kind_of_work: str) -> str:
     k = (kind_of_work or "").lower()
@@ -85,6 +111,7 @@ def _lesson_type_mapper(kind_of_work: str) -> str:
         return "зачет"
     else:
         return kind_of_work
+
 
 def _format_lesson_block(les: UserScheduleLesson) -> str:
     t1 = _time_hhmm(les["begin_lesson"])
@@ -112,7 +139,9 @@ def _format_day_message(lessons: list[UserScheduleLesson], target: datetime) -> 
     if not lessons:
         lines.append("  😴 Пар нет")
     else:
-        for n, les in enumerate(sorted(lessons, key=lambda x: (x["begin_lesson"], x["lesson_id"]))):
+        for n, les in enumerate(
+            sorted(lessons, key=lambda x: (x["begin_lesson"], x["lesson_id"]))
+        ):
             lines.append(_format_lesson_block(les))
     return _escape_like_prototype("\n".join(lines))
 
@@ -137,7 +166,9 @@ def _format_week_message(anchor: datetime, lessons: list[UserScheduleLesson]) ->
         lines.append(f"\n*= 📆 {days_short[i]} ({day_lbl}) =*")
         day_entries = by_date.get(d_iso, [])
         if day_entries:
-            for n, les in enumerate(sorted(day_entries, key=lambda x: (x["begin_lesson"], x["lesson_id"]))):
+            for n, les in enumerate(
+                sorted(day_entries, key=lambda x: (x["begin_lesson"], x["lesson_id"]))
+            ):
                 lines.append(_format_lesson_block(les))
         else:
             lines.append("  😴 Пар нет")
@@ -145,18 +176,32 @@ def _format_week_message(anchor: datetime, lessons: list[UserScheduleLesson]) ->
     return _escape_like_prototype("\n".join(lines))
 
 
+def _lessons_for_date(
+    lessons: list[UserScheduleLesson], target_date: datetime
+) -> list[UserScheduleLesson]:
+    target_iso = target_date.strftime("%Y-%m-%d")
+    return [lesson for lesson in lessons if lesson["date"] == target_iso]
+
+
 async def _fetch_user(client, user_id: int):
-    try:
-        return await client.users.get_by_id(user_id)
-    except RuzHttpError as e:
-        if e.status_code == 404:
-            return None
-        raise
+    async def loader():
+        try:
+            return await client.users.get_by_id(user_id)
+        except RuzHttpError as e:
+            if e.status_code == 404:
+                return None
+            raise
+
+    return await cache.get_or_load_profile(user_id, loader)
 
 
 async def _fetch_group(client, group_oid: int):
     try:
         return await client.groups.get_group(group_oid)
+    except RuzHttpError as e:
+        if e.status_code == 404:
+            return None
+        raise
     except ValueError:
         return None
 
@@ -173,6 +218,62 @@ def _group_hit_for_oid(hits: list, group_oid: int):
         if h["oid"] == group_oid:
             return h
     return None
+
+
+def _filter_lessons_for_subgroup(
+    lessons: list[UserScheduleLesson], subgroup: int
+) -> list[UserScheduleLesson]:
+    if subgroup == 0:
+        return lessons
+
+    filtered_lessons = []
+    for lesson in lessons:
+        lesson_subgroup = lesson.get("sub_group")
+        # sub_group=0 (или null) означает «для всех подгрупп».
+        if lesson_subgroup in (0, None):
+            filtered_lessons.append(lesson)
+            continue
+        try:
+            if int(lesson_subgroup) == subgroup:
+                filtered_lessons.append(lesson)
+        except (TypeError, ValueError):
+            continue
+    return filtered_lessons
+
+
+async def get_user_week_lessons(client, user_id: int, anchor_date):
+    user = await _fetch_user(client, user_id)
+    if user is None:
+        return None, None
+
+    group_oid = user.get("group_oid")
+    subgroup_raw = user.get("subgroup")
+    if not group_oid or subgroup_raw is None:
+        return user, None
+    try:
+        subgroup = int(subgroup_raw)
+    except (TypeError, ValueError):
+        subgroup = 0
+
+    lessons = await cache.get_or_load_group_week_lessons(
+        group_oid,
+        anchor_date,
+        lambda group_anchor: client.schedule.get_group_week(group_oid, group_anchor),
+    )
+    if lessons is None:
+        return user, []
+
+    filtered_lessons = _filter_lessons_for_subgroup(lessons, subgroup)
+
+    async def user_week_loader(_anchor):
+        return filtered_lessons
+
+    cached_lessons = await cache.get_or_load_week_lessons(
+        user_id,
+        anchor_date,
+        user_week_loader,
+    )
+    return user, cached_lessons
 
 
 def _normalize_parse_day_delta(date_arg) -> int:
@@ -200,19 +301,36 @@ def _normalize_parse_day_delta(date_arg) -> int:
 
 async def dateCommand(bot, message, date_arg, *, user_id: int):
     """
-    Расписание на день через ``GET .../schedule/user/{id}/day``.
+    Расписание на день через кешированную неделю группы.
     """
     delta_days = _normalize_parse_day_delta(date_arg)
-    logger.info(f"dateCommand called: user={user_id}, date_arg={date_arg!r} -> delta_days={delta_days}")
+    logger.info(
+        f"dateCommand called: user={user_id}, date_arg={date_arg!r} -> delta_days={delta_days}"
+    )
 
     async with ruz_client() as client:
         target_date = datetime.today() + timedelta(days=delta_days)
-        lessons = await client.schedule.get_user_day(user_id, target_date.date())
+        _, week_lessons = await get_user_week_lessons(
+            client, user_id, target_date.date()
+        )
+
+    if week_lessons is None:
+        await backCommand(bot, message, user_id=user_id)
+        return
+
+    async def day_loader(_day_date):
+        return _lessons_for_date(week_lessons, target_date)
+
+    day_lessons = await cache.get_or_load_day_lessons(
+        user_id,
+        target_date.date(),
+        day_loader,
+    )
 
     if is_dangerous_criminal(user_id):
-        reply_message = criminal_format_day_message(lessons, target_date)
+        reply_message = criminal_format_day_message(day_lessons, target_date)
     else:
-        reply_message = _format_day_message(lessons, target_date)
+        reply_message = _format_day_message(day_lessons, target_date)
 
     reply_message = reply_message.replace("преподавател", "преподаватель")
 
@@ -232,12 +350,20 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
         reply_markup=markup,
         parse_mode="MarkdownV2",
     )
+    await cache.store_screen_snapshot(
+        user_id,
+        cache.normalize_screen_key(f"parseDay {delta_days}"),
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source=f"parseDay {delta_days}",
+    )
     logger.info(f"dateCommand completed: user={user_id}")
 
 
 async def weekCommand(bot, message, _timedelta, *, user_id: int):
     """
-    Расписание на неделю через ``GET .../schedule/user/{id}/week``.
+    Расписание на неделю через кешированную неделю группы.
     """
     logger.info(f"weekCommand called: user={user_id}, _timedelta={_timedelta!r}")
 
@@ -249,8 +375,12 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
             logger.error(f"Invalid _timedelta '{_timedelta}', defaulting to 0")
 
         base = datetime.today() + timedelta(weeks=delta_weeks)
-        lessons = await client.schedule.get_user_week(user_id, base.date())
+        _, lessons = await get_user_week_lessons(client, user_id, base.date())
         last_update = datetime.now().strftime("%d.%m %H:%M:%S")
+
+    if lessons is None:
+        await backCommand(bot, message, user_id=user_id)
+        return
 
     if is_dangerous_criminal(user_id):
         temp_message = criminal_format_week_message(base, lessons)
@@ -268,9 +398,13 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
     next_week = delta_weeks + 1
     markup = types.InlineKeyboardMarkup()
     markup.row(
-        types.InlineKeyboardButton("Пред. нед.", callback_data=f"parseWeek {prev_week}"),
+        types.InlineKeyboardButton(
+            "Пред. нед.", callback_data=f"parseWeek {prev_week}"
+        ),
         types.InlineKeyboardButton("Назад", callback_data="start"),
-        types.InlineKeyboardButton("След. нед.", callback_data=f"parseWeek {next_week}"),
+        types.InlineKeyboardButton(
+            "След. нед.", callback_data=f"parseWeek {next_week}"
+        ),
     )
     markup.row(
         types.InlineKeyboardButton(
@@ -289,6 +423,14 @@ async def weekCommand(bot, message, _timedelta, *, user_id: int):
         message_id=message.message_id,
         reply_markup=markup,
         parse_mode="MarkdownV2",
+    )
+    await cache.store_screen_snapshot(
+        user_id,
+        cache.normalize_screen_key(f"parseWeek {delta_weeks}"),
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source=f"parseWeek {delta_weeks}",
     )
     logger.info(f"weekCommand completed: user={user_id}")
 
@@ -319,7 +461,6 @@ async def sendProfileCommand(bot, message, *, user_id: int):
             await backCommand(bot, message, user_id=user_id)
             return
 
-        id = user.get("id")
         group_oid = user.get("group_oid")
         subgroup = user.get("subgroup")
         username = user.get("username", "")
@@ -353,6 +494,14 @@ async def sendProfileCommand(bot, message, *, user_id: int):
         reply_markup=markup,
         parse_mode="MarkdownV2",
     )
+    await cache.store_screen_snapshot(
+        user_id,
+        "showProfile",
+        text=reply_message,
+        reply_markup=markup,
+        parse_mode="MarkdownV2",
+        source="showProfile",
+    )
     logger.info(f"sendProfileCommand completed: user={user_id}")
 
 
@@ -366,14 +515,20 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
     подставляет ``no_faculty`` для новой записи группы.
     """
     user_id = callback.from_user.id
-    logger.info(f"setGroup called: user_id={user_id}, group_oid={group_oid}, group_label={group_label!r}")
+    logger.info(
+        f"setGroup called: user_id={user_id}, group_oid={group_oid}, group_label={group_label!r}"
+    )
 
     uname = callback.from_user.username or str(user_id)
 
     async with ruz_client() as client:
         server_group = await _fetch_group(client, group_oid)
-        group_guid = None
-        group_name = None
+        group_guid = _normalize_optional_str(
+            server_group.get("guid") if server_group else None
+        )
+        group_name = _normalize_optional_str(
+            server_group.get("name") if server_group else None
+        )
 
         if server_group is None:
             hits = await client.groups.search_groups_by_name(group_label)
@@ -387,8 +542,12 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
                     [h["oid"] for h in hits],
                 )
 
-            group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
-            group_name = _normalize_optional_str(hit.get("name") if hit else group_label)
+            if group_guid is None:
+                group_guid = _normalize_optional_str(hit.get("guid") if hit else None)
+            if group_name is None:
+                group_name = _normalize_optional_str(
+                    hit.get("name") if hit else group_label
+                )
 
             missing_meta = [
                 name
@@ -425,17 +584,21 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
                     group_name=group_name,
                 )
             )
-            logger.info(f"User {user_id} created with group_oid={group_oid}, subgroup=null")
+            logger.info(
+                f"User {user_id} created with group_oid={group_oid}, subgroup=null"
+            )
+            await cache.invalidate_user(user_id)
             return True
 
         await client.users.update_user(
             user_id,
             UserUpdate(
                 group_oid=group_oid,
-                group_guid=group_guid if server_group is None else UNSET,
-                group_name=group_name if server_group is None else UNSET,
+                group_guid=group_guid,
+                group_name=group_name,
             ),
         )
+        await cache.invalidate_user(user_id)
         logger.info(f"User {user_id} updated group_oid={group_oid}")
         return True
 
@@ -443,22 +606,39 @@ async def setGroup(bot, callback, group_oid: int, group_label: str) -> bool:
 async def updateUserSubGroup(user_id: int, sub_group: int) -> None:
     async with ruz_client() as client:
         await client.users.update_user(user_id, UserUpdate(subgroup=sub_group))
+    await cache.invalidate_user(user_id)
 
 
-async def search_menu_stub_command(bot, message, *, user_id: int) -> None:
+async def search_menu_stub_command(
+    bot, message, *, user_id: int, screen_name: str = "searchStub"
+) -> None:
     """Временная заглушка для «Преподаватели» / «Предметы» в главном меню."""
+    reply_message = "Ой, это пока что недоступно"
+    markup = quick_markup({"Назад": {"callback_data": "start"}}, row_width=1)
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=message.message_id,
-        text="Ой, это пока что недоступно",
-        reply_markup=quick_markup({"Назад": {"callback_data": "start"}}, row_width=1),
+        text=reply_message,
+        reply_markup=markup,
+    )
+    await cache.store_screen_snapshot(
+        user_id,
+        screen_name,
+        text=reply_message,
+        reply_markup=markup,
+        source=screen_name,
     )
 
 
 async def backCommand(bot, message, additional_message: str = "", *, user_id: int):
-    logger.info(f"backCommand called: user_id={user_id}, additional_message={additional_message!r}")
+    logger.info(
+        f"backCommand called: user_id={user_id}, additional_message={additional_message!r}"
+    )
 
-    reply_message = additional_message + "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    reply_message = (
+        additional_message
+        + "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
+    )
     markup = markups.generateStartMarkup()
 
     async with ruz_client() as client:
@@ -491,4 +671,12 @@ async def backCommand(bot, message, additional_message: str = "", *, user_id: in
         message_id=message.message_id,
         reply_markup=markup,
     )
+    if not additional_message:
+        await cache.store_screen_snapshot(
+            user_id,
+            "start",
+            text=reply_message,
+            reply_markup=markup,
+            source="start",
+        )
     logger.info(f"backCommand completed: user_id={user_id}")
