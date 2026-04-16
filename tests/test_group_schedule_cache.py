@@ -76,6 +76,7 @@ ruzbot_utils.ruz_client = _dummy_ruz_client
 ruzbot_utils.remove_position = lambda value: value
 
 ruzclient = _ensure_module("ruzclient")
+ruzclient.UNSET = object()
 ruzclient.UserCreate = type("UserCreate", (), {})
 ruzclient.UserScheduleLesson = dict
 ruzclient.UserUpdate = type("UserUpdate", (), {})
@@ -124,6 +125,15 @@ class FakeClient:
         self.schedule = FakeScheduleClient(lessons)
 
 
+class FakeGroupClient:
+    def __init__(self, side_effect) -> None:
+        self.groups = type(
+            "Groups",
+            (),
+            {"get_group": AsyncMock(side_effect=side_effect)},
+        )()
+
+
 class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
     def test_group_week_key_uses_group_prefix(self) -> None:
         key = cache.group_week_key(17, date(2026, 3, 26))
@@ -137,9 +147,10 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
         profile_key = f"{prefix}:user:42:profile"
         screen_key = f"{prefix}:user:42:screen:start"
         old_user_week_key = f"{prefix}:user:42:schedule:week:2026-03-23"
+        old_user_day_key = f"{prefix}:user:42:schedule:day:2026-03-26"
         group_week_key = f"{prefix}:group:55:schedule:week:2026-03-23"
         fake = FakeRedisClient(
-            [profile_key, screen_key, old_user_week_key, group_week_key]
+            [profile_key, screen_key, old_user_week_key, old_user_day_key, group_week_key]
         )
 
         with patch.object(cache, "get_redis_client", AsyncMock(return_value=fake)):
@@ -147,7 +158,8 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
 
         self.assertIn(profile_key, fake.deleted)
         self.assertIn(screen_key, fake.deleted)
-        self.assertNotIn(old_user_week_key, fake.deleted)
+        self.assertIn(old_user_week_key, fake.deleted)
+        self.assertIn(old_user_day_key, fake.deleted)
         self.assertNotIn(group_week_key, fake.deleted)
 
     async def test_get_user_week_lessons_filters_by_subgroup(self) -> None:
@@ -191,12 +203,23 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
                 self.assertEqual(group_id, 55)
                 return await loader(cache.week_anchor_date(anchor_date))
 
+            async def fake_get_or_load_user_week_lessons(
+                user_id, anchor_date, loader
+            ):
+                self.assertEqual(user_id, 100)
+                return await loader(cache.week_anchor_date(anchor_date))
+
             with (
                 patch.object(commands, "_fetch_user", side_effect=fake_fetch_user),
                 patch.object(
                     commands.cache,
                     "get_or_load_group_week_lessons",
                     side_effect=fake_get_or_load_group_week_lessons,
+                ),
+                patch.object(
+                    commands.cache,
+                    "get_or_load_week_lessons",
+                    side_effect=fake_get_or_load_user_week_lessons,
                 ),
             ):
                 _, filtered = await commands.get_user_week_lessons(
@@ -207,3 +230,16 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
             fake_client.schedule.get_group_week.assert_awaited_once_with(
                 55, date(2026, 3, 23)
             )
+
+    async def test_fetch_group_returns_none_for_404(self) -> None:
+        fake_client = FakeGroupClient(RuzHttpError(404))
+
+        result = await commands._fetch_group(fake_client, 55)
+
+        self.assertIsNone(result)
+
+    async def test_fetch_group_reraises_non_404(self) -> None:
+        fake_client = FakeGroupClient(RuzHttpError(500))
+
+        with self.assertRaises(RuzHttpError):
+            await commands._fetch_group(fake_client, 55)

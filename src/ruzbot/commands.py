@@ -219,6 +219,27 @@ def _group_hit_for_oid(hits: list, group_oid: int):
             return h
     return None
 
+
+def _filter_lessons_for_subgroup(
+    lessons: list[UserScheduleLesson], subgroup: int
+) -> list[UserScheduleLesson]:
+    if subgroup == 0:
+        return lessons
+
+    filtered_lessons = []
+    for lesson in lessons:
+        lesson_subgroup = lesson.get("sub_group")
+        # sub_group=0 (или null) означает «для всех подгрупп».
+        if lesson_subgroup in (0, None):
+            filtered_lessons.append(lesson)
+            continue
+        try:
+            if int(lesson_subgroup) == subgroup:
+                filtered_lessons.append(lesson)
+        except (TypeError, ValueError):
+            continue
+    return filtered_lessons
+
 async def get_user_week_lessons(client, user_id: int, anchor_date):
     user = await _fetch_user(client, user_id)
     if user is None:
@@ -241,22 +262,16 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
     if lessons is None:
         return user, []
 
-    if subgroup == 0:
-        return user, lessons
+    filtered_lessons = _filter_lessons_for_subgroup(lessons, subgroup)
+    async def user_week_loader(_anchor):
+        return filtered_lessons
 
-    filtered_lessons = []
-    for lesson in lessons:
-        lesson_subgroup = lesson.get("sub_group")
-        # sub_group=0 (или null) означает «для всех подгрупп».
-        if lesson_subgroup in (0, None):
-            filtered_lessons.append(lesson)
-            continue
-        try:
-            if int(lesson_subgroup) == subgroup:
-                filtered_lessons.append(lesson)
-        except (TypeError, ValueError):
-            continue
-    return user, filtered_lessons
+    cached_lessons = await cache.get_or_load_week_lessons(
+        user_id,
+        anchor_date,
+        user_week_loader,
+    )
+    return user, cached_lessons
 
 
 def _normalize_parse_day_delta(date_arg) -> int:
@@ -293,12 +308,19 @@ async def dateCommand(bot, message, date_arg, *, user_id: int):
 
     async with ruz_client() as client:
         target_date = datetime.today() + timedelta(days=delta_days)
-        _, lessons = await get_user_week_lessons(client, user_id, target_date.date())
+        _, week_lessons = await get_user_week_lessons(client, user_id, target_date.date())
 
-    if lessons is None:
+    if week_lessons is None:
         await backCommand(bot, message, user_id=user_id)
         return
-    day_lessons = _lessons_for_date(lessons, target_date)
+    async def day_loader(_day_date):
+        return _lessons_for_date(week_lessons, target_date)
+
+    day_lessons = await cache.get_or_load_day_lessons(
+        user_id,
+        target_date.date(),
+        day_loader,
+    )
 
     if is_dangerous_criminal(user_id):
         reply_message = criminal_format_day_message(day_lessons, target_date)

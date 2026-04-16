@@ -48,6 +48,12 @@ def week_key(user_id: int, week_date: date | datetime) -> str:
     return f"{user_prefix(user_id)}:schedule:week:{anchor.isoformat()}"
 
 
+def day_key(user_id: int, day_date: date | datetime) -> str:
+    if isinstance(day_date, datetime):
+        day_date = day_date.date()
+    return f"{user_prefix(user_id)}:schedule:day:{day_date.isoformat()}"
+
+
 def group_prefix(group_id: int) -> str:
     return f"{_key_prefix()}:group:{group_id}"
 
@@ -213,6 +219,27 @@ async def get_or_load_week_lessons(
     return lessons
 
 
+async def get_or_load_day_lessons(
+    user_id: int,
+    day_date: date | datetime,
+    loader: Callable[[date], Awaitable[Any]],
+) -> Any:
+    key = day_key(user_id, day_date)
+    cached = await _read_json_key(key)
+    if cached is not None:
+        return cached
+
+    if isinstance(day_date, datetime):
+        day_date = day_date.date()
+
+    lessons = await loader(day_date)
+    if lessons is None:
+        return None
+
+    await _store_json_key(key, lessons, settings.redis_ttl_schedule_s)
+    return lessons
+
+
 async def get_or_load_group_week_lessons(
     group_id: int,
     anchor_date: date | datetime,
@@ -297,9 +324,9 @@ async def invalidate_user(user_id: int) -> None:
         return
 
     try:
-        keys = [profile_key(user_id)]
-        screen_pattern = f"{user_prefix(user_id)}:screen:*"
-        keys.extend([key async for key in client.scan_iter(match=screen_pattern)])
-        await client.delete(*keys)
+        pattern = f"{user_prefix(user_id)}:*"
+        keys = [key async for key in client.scan_iter(match=pattern)]
+        if keys:
+            await client.delete(*keys)
     except Exception:
         logger.exception("Failed to invalidate Redis keys for user %s", user_id)
