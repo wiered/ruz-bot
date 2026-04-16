@@ -224,7 +224,6 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
     subgroup_raw = user.get("subgroup")
     if not group_oid or subgroup_raw is None:
         return user, None
-
     try:
         subgroup = int(subgroup_raw)
     except (TypeError, ValueError):
@@ -244,6 +243,7 @@ async def get_user_week_lessons(client, user_id: int, anchor_date):
     filtered_lessons = []
     for lesson in lessons:
         lesson_subgroup = lesson.get("sub_group")
+        # sub_group=0 (или null) означает «для всех подгрупп».
         if lesson_subgroup in (0, None):
             filtered_lessons.append(lesson)
             continue
