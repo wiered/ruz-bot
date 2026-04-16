@@ -80,9 +80,10 @@ PAYMENT_URL=https://example.com/donate
 PORT=2201
 REDIS_URL=redis://localhost:6379/0
 REDIS_KEY_PREFIX=ruzbot
-REDIS_TTL_PROFILE_S=1800
-REDIS_TTL_SCHEDULE_S=300
-REDIS_TTL_MESSAGE_S=600
+REDIS_TTL_PROFILE_S=900
+REDIS_TTL_GROUP_SCHEDULE_S=3600
+REDIS_TTL_USER_SCHEDULE_S=300
+REDIS_TTL_MESSAGE_S=300
 ```
 
 Назначение переменных:
@@ -95,7 +96,8 @@ REDIS_TTL_MESSAGE_S=600
 - `REDIS_URL` - адрес Redis для кэша профиля, расписания и snapshot-сообщений;
 - `REDIS_KEY_PREFIX` - префикс ключей в Redis, по умолчанию `ruzbot`;
 - `REDIS_TTL_PROFILE_S` - TTL профиля пользователя;
-- `REDIS_TTL_SCHEDULE_S` - TTL структурированного недельного расписания группы;
+- `REDIS_TTL_GROUP_SCHEDULE_S` - TTL сырого недельного расписания группы (общий кеш по `group_oid`);
+- `REDIS_TTL_USER_SCHEDULE_S` - TTL недели/дня расписания после фильтра по подгруппе (ключи `user:…:schedule:…`);
 - `REDIS_TTL_MESSAGE_S` - TTL snapshot-сообщений для быстрого `Назад`.
 
 Если Redis недоступен, бот продолжит работать напрямую через backend API без кэша.
