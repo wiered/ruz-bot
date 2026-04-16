@@ -8,6 +8,7 @@ from telebot.asyncio_helper import ApiTelegramException
 from telebot.formatting import mlink
 from telebot.util import quick_markup
 
+from ruzbot import cache
 from ruzbot import markups
 from ruzbot.utils import ruz_client
 
@@ -73,7 +74,9 @@ class RuzBot(AsyncTeleBot):
                 )
             raise
 
-    async def edit_message_text(self, text: str, **kwargs) -> Union[types.Message, bool]:
+    async def edit_message_text(
+        self, text: str, **kwargs
+    ) -> Union[types.Message, bool]:
         parse_mode = kwargs.get("parse_mode", self.parse_mode)
         text = _append_donation_footer(text, parse_mode)
         try:
@@ -94,23 +97,30 @@ async def startCommand(message):
     """
     /start: главное меню или подсказки по регистрации (группа / незавершённая регистрация).
     """
-    reply_message = (
-        "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
-    )
+    reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
     markup = markups.generateStartMarkup()
 
     async with ruz_client() as client:
-        try:
-            user = await client.users.get_by_id(message.from_user.id)
-        except RuzHttpError as e:
-            if e.status_code == 404:
-                user = None
-            else:
+
+        async def loader():
+            try:
+                return await client.users.get_by_id(message.from_user.id)
+            except RuzHttpError as e:
+                if e.status_code == 404:
+                    return None
                 raise
 
-        if user is not None and user.get("group_oid") and user.get("subgroup") is not None:
+        user = await cache.get_or_load_profile(message.from_user.id, loader)
+
+        if (
+            user is not None
+            and user.get("group_oid")
+            and user.get("subgroup") is not None
+        ):
             pass
-        elif user is not None and user.get("group_oid") and user.get("subgroup") is None:
+        elif (
+            user is not None and user.get("group_oid") and user.get("subgroup") is None
+        ):
             markup = quick_markup(
                 {"Выбрать другую группу": {"callback_data": "configureGroup"}},
                 row_width=1,
@@ -130,3 +140,10 @@ async def startCommand(message):
             )
 
     await bot.reply_to(message, reply_message, reply_markup=markup)
+    await cache.store_screen_snapshot(
+        message.from_user.id,
+        "start",
+        text=reply_message,
+        reply_markup=markup,
+        source="start",
+    )

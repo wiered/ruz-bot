@@ -78,6 +78,11 @@ BASE_URL=https://your-ruz-backend.example
 TOKEN=your_backend_api_token
 PAYMENT_URL=https://example.com/donate
 PORT=2201
+REDIS_URL=redis://localhost:6379/0
+REDIS_KEY_PREFIX=ruzbot
+REDIS_TTL_PROFILE_S=1800
+REDIS_TTL_SCHEDULE_S=300
+REDIS_TTL_MESSAGE_S=600
 ```
 
 Назначение переменных:
@@ -87,6 +92,21 @@ PORT=2201
 - `TOKEN` - API-ключ для backend-сервиса, если он требуется;
 - `PAYMENT_URL` - необязательная ссылка, которая добавляется в конец сообщений;
 - `PORT` - служебная переменная, в текущем режиме long polling не используется при запуске бота.
+- `REDIS_URL` - адрес Redis для кэша профиля, расписания и snapshot-сообщений;
+- `REDIS_KEY_PREFIX` - префикс ключей в Redis, по умолчанию `ruzbot`;
+- `REDIS_TTL_PROFILE_S` - TTL профиля пользователя;
+- `REDIS_TTL_SCHEDULE_S` - TTL структурированного недельного расписания группы;
+- `REDIS_TTL_MESSAGE_S` - TTL snapshot-сообщений для быстрого `Назад`.
+
+Если Redis недоступен, бот продолжит работать напрямую через backend API без кэша.
+
+Кэширование сейчас покрывает:
+
+- профиль пользователя;
+- недельное расписание группы как общий источник для `Сегодня`, `Завтра`, `Пред. день`, `След. день`, `Эта неделя` и `Следующая неделя`;
+- snapshot текста и кнопок для экранов, которые используются в `Назад`.
+
+Поиск по преподавателям и предметам пока работает без Redis-кэша.
 
 Важно: не храните рабочие токены и ключи в публичном репозитории.
 
@@ -121,11 +141,27 @@ docker build -t ruzbot .
 docker build --build-arg RUZ_EXTRA=ruzclientdev -t ruzbot .
 ```
 
-Запуск контейнера:
+Запуск контейнера с настройками по умолчанию:
+
+```bash
+docker run --rm ruzbot
+```
+
+Запуск контейнера с переменными из файла `.env`:
 
 ```bash
 docker run --rm --env-file .env ruzbot
 ```
+
+Запуск через Docker Compose (бот + Redis):
+
+```bash
+docker compose up --build
+```
+
+В `docker-compose.yml` сервис бота автоматически получает
+`REDIS_URL=redis://redis:6379/0`, чтобы подключаться к Redis по имени сервиса
+`redis` внутри compose-сети.
 
 ## Как работает бот
 
