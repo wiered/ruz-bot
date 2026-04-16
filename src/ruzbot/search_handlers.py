@@ -212,10 +212,14 @@ async def lecturer_day_command(
     uwd = from_user_week
     if uwd is not None:
         back_cb = f"weekTeacherOpen {lecturer_id} {uwd} {list_page}"
-        day_line = lambda dd: f"lecturerDayW {lecturer_id} {dd} {list_page} {uwd}"
+
+        def day_line(dd: int) -> str:
+            return f"lecturerDayW {lecturer_id} {dd} {list_page} {uwd}"
     else:
         back_cb = f"teacherCard {lecturer_id} {list_page}"
-        day_line = lambda dd: f"lecturerDay {lecturer_id} {dd} {list_page}"
+
+        def day_line(dd: int) -> str:
+            return f"lecturerDay {lecturer_id} {dd} {list_page}"
 
     async with ruz_client() as client:
         target = datetime.today() + timedelta(days=day_delta)
@@ -278,10 +282,14 @@ async def lecturer_week_command(
     uwd = from_user_week
     if uwd is not None:
         back_cb = f"weekTeacherOpen {lecturer_id} {uwd} {list_page}"
-        week_line = lambda wd: f"lecturerWeekW {lecturer_id} {wd} {list_page} {uwd}"
+
+        def week_line(wd: int) -> str:
+            return f"lecturerWeekW {lecturer_id} {wd} {list_page} {uwd}"
     else:
         back_cb = f"teacherCard {lecturer_id} {list_page}"
-        week_line = lambda wd: f"lecturerWeek {lecturer_id} {wd} {list_page}"
+
+        def week_line(wd: int) -> str:
+            return f"lecturerWeek {lecturer_id} {wd} {list_page}"
 
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=week_delta)
@@ -468,10 +476,14 @@ async def discipline_day_command(
     uwd = from_user_week
     if uwd is not None:
         back_cb = f"weekSubjectOpen {discipline_id} {uwd} {list_page}"
-        day_line = lambda dd: f"disciplineDayW {discipline_id} {dd} {list_page} {uwd}"
+
+        def day_line(dd: int) -> str:
+            return f"disciplineDayW {discipline_id} {dd} {list_page} {uwd}"
     else:
         back_cb = f"subjectCard {discipline_id} {list_page}"
-        day_line = lambda dd: f"disciplineDay {discipline_id} {dd} {list_page}"
+
+        def day_line(dd: int) -> str:
+            return f"disciplineDay {discipline_id} {dd} {list_page}"
 
     async with ruz_client() as client:
         target = datetime.today() + timedelta(days=day_delta)
@@ -549,10 +561,14 @@ async def discipline_week_command(
     uwd = from_user_week
     if uwd is not None:
         back_cb = f"weekSubjectOpen {discipline_id} {uwd} {list_page}"
-        week_line = lambda wd: f"disciplineWeekW {discipline_id} {wd} {list_page} {uwd}"
+
+        def week_line(wd: int) -> str:
+            return f"disciplineWeekW {discipline_id} {wd} {list_page} {uwd}"
     else:
         back_cb = f"subjectCard {discipline_id} {list_page}"
-        week_line = lambda wd: f"disciplineWeek {discipline_id} {wd} {list_page}"
+
+        def week_line(wd: int) -> str:
+            return f"disciplineWeek {discipline_id} {wd} {list_page}"
 
     async with ruz_client() as client:
         base = datetime.today() + timedelta(weeks=week_delta)

@@ -397,7 +397,6 @@ async def sendProfileCommand(bot, message, *, user_id: int):
             await backCommand(bot, message, user_id=user_id)
             return
 
-        id = user.get("id")
         group_oid = user.get("group_oid")
         subgroup = user.get("subgroup")
         username = user.get("username", "")
