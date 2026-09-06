@@ -10,6 +10,7 @@ from telebot.util import quick_markup
 
 from ruzbot import cache
 from ruzbot import markups
+from ruzbot.activity import touch_user_activity
 from ruzbot.utils import ruz_client
 
 from ruzclient.errors import RuzHttpError
@@ -97,6 +98,8 @@ async def startCommand(message):
     """
     /start: главное меню или подсказки по регистрации (группа / незавершённая регистрация).
     """
+    await touch_user_activity(message.from_user.id)
+
     reply_message = "Привет, я бот для просмотра расписания МГТУ. Что хочешь узнать?\n"
     markup = markups.generateStartMarkup()
 

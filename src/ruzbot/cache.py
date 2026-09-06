@@ -361,3 +361,15 @@ async def invalidate_user(user_id: int) -> None:
             await client.delete(*keys)
     except Exception:
         logger.exception("Failed to invalidate Redis keys for user %s", user_id)
+
+
+async def invalidate_profile(user_id: int) -> None:
+    """Удаляет только кеш профиля пользователя."""
+    client = await get_redis_client()
+    if client is None:
+        return
+
+    try:
+        await client.delete(profile_key(user_id))
+    except Exception:
+        logger.exception("Failed to invalidate profile cache for user %s", user_id)
