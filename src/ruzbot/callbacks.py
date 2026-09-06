@@ -6,6 +6,7 @@ from telebot.util import quick_markup
 
 from ruzbot import cache
 from ruzbot import commands, search_handlers
+from ruzbot.activity import touch_user_activity
 from ruzbot.utils import getRandomGroup, ruz_client
 from ruzclient.errors import RuzHttpError
 
@@ -33,6 +34,8 @@ async def textCallbackHandler(callback, bot: AsyncTeleBot):
     """
     Текст: имя группы (паттерны как раньше) или одна цифра для подгруппы.
     """
+    await touch_user_activity(callback.from_user.id)
+
     logger.info(
         f"textCallbackHandler invoked: user_id={callback.from_user.id}, text={callback.text!r}"
     )
@@ -105,6 +108,7 @@ async def buttonsCallback(callback, bot: AsyncTeleBot):
         f"buttonsCallback invoked: user_id={callback.from_user.id}, data={callback.data!r}"
     )
     uid = callback.from_user.id
+    await touch_user_activity(uid)
 
     if callback.data:
         if await cache.replay_screen_snapshot(

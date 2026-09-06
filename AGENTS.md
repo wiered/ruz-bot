@@ -13,6 +13,7 @@
 - **Smoke:** `python -c "import ruzbot"` after install (no polling).
 - **Docker:** `docker build -t ruzbot .` (optional `--build-arg RUZ_EXTRA=ruzclientdev`); `docker run --rm --env-file .env ruzbot`.
 - **VS Code:** `tasks.json` has Docker + `python -m pytest`; pytest not in `pyproject.toml` — install manually until tests land.
+- **Tests:** use local pytest `.\.venv\Scripts\pytest -q`
 
 ## Coding Style & Naming Conventions
 

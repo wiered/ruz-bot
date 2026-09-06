@@ -141,6 +141,30 @@ class FakeGroupClient:
         )()
 
 
+class FakeRedisForGroupScheduleSlide:
+    """Minimal async Redis client for group schedule cache hit + TTL slide tests."""
+
+    def __init__(self, key: str, value: object, ttl_return: int) -> None:
+        self.key = key
+        self._raw = cache._json_dumps(value)
+        self._ttl_return = ttl_return
+        self.expire_calls: list[tuple[str, int]] = []
+
+    async def get(self, k: str) -> str | None:
+        if k == self.key:
+            return self._raw
+        return None
+
+    async def ttl(self, k: str) -> int:
+        if k != self.key:
+            return -2
+        return self._ttl_return
+
+    async def expire(self, k: str, seconds: int) -> bool:
+        self.expire_calls.append((k, seconds))
+        return True
+
+
 class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
     def test_group_week_key_uses_group_prefix(self) -> None:
         key = cache.group_week_key(17, date(2026, 3, 26))
@@ -294,3 +318,76 @@ class GroupScheduleCacheTests(IsolatedAsyncioTestCase):
         self.assertEqual(update_payload.group_oid, 55)
         self.assertEqual(update_payload.group_guid, "guid-55")
         self.assertEqual(update_payload.group_name, "Group 55")
+
+    async def test_group_week_cache_hit_slides_ttl_at_2999s(self) -> None:
+        key = cache.group_week_key(55, date(2026, 3, 26))
+        lessons = [{"lesson_id": 1}]
+        fake = FakeRedisForGroupScheduleSlide(key, lessons, ttl_return=2999)
+
+        async def must_not_load(_):
+            raise AssertionError("loader must not run on cache hit")
+
+        with patch.object(cache, "get_redis_client", AsyncMock(return_value=fake)):
+            out = await cache.get_or_load_group_week_lessons(
+                55, date(2026, 3, 26), must_not_load
+            )
+
+        self.assertEqual(out, lessons)
+        self.assertEqual(fake.expire_calls, [(key, 3599)])
+
+    async def test_group_week_cache_hit_no_slide_at_3000s(self) -> None:
+        key = cache.group_week_key(55, date(2026, 3, 26))
+        lessons = [{"lesson_id": 2}]
+        fake = FakeRedisForGroupScheduleSlide(key, lessons, ttl_return=3000)
+
+        async def must_not_load(_):
+            raise AssertionError("loader must not run on cache hit")
+
+        with patch.object(cache, "get_redis_client", AsyncMock(return_value=fake)):
+            out = await cache.get_or_load_group_week_lessons(
+                55, date(2026, 3, 26), must_not_load
+            )
+
+        self.assertEqual(out, lessons)
+        self.assertEqual(fake.expire_calls, [])
+
+    async def test_group_week_cache_hit_slide_caps_at_3600(self) -> None:
+        key = cache.group_week_key(55, date(2026, 3, 26))
+        lessons = [{"lesson_id": 3}]
+        fake = FakeRedisForGroupScheduleSlide(key, lessons, ttl_return=100)
+
+        async def must_not_load(_):
+            raise AssertionError("loader must not run on cache hit")
+
+        with (
+            patch.object(cache, "get_redis_client", AsyncMock(return_value=fake)),
+            patch.object(cache.settings, "redis_group_schedule_slide_extend_s", 4000),
+        ):
+            out = await cache.get_or_load_group_week_lessons(
+                55, date(2026, 3, 26), must_not_load
+            )
+
+        self.assertEqual(out, lessons)
+        self.assertEqual(fake.expire_calls, [(key, 3600)])
+
+    async def test_group_week_cache_hit_slide_skips_when_second_client_none(
+        self,
+    ) -> None:
+        key = cache.group_week_key(55, date(2026, 3, 26))
+        lessons = [{"lesson_id": 4}]
+        fake = FakeRedisForGroupScheduleSlide(key, lessons, ttl_return=10)
+
+        async def must_not_load(_):
+            raise AssertionError("loader must not run on cache hit")
+
+        with patch.object(
+            cache,
+            "get_redis_client",
+            AsyncMock(side_effect=[fake, None]),
+        ):
+            out = await cache.get_or_load_group_week_lessons(
+                55, date(2026, 3, 26), must_not_load
+            )
+
+        self.assertEqual(out, lessons)
+        self.assertEqual(fake.expire_calls, [])
